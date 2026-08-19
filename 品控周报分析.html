@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品控周报分析</title>
+<style>
+/* ========== 全局重置 ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f5f7fa; color: #1f3a6b; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ========== 变量 ========== */
+:root {
+    --primary: #1f3a6b; --primary-light: #2a5298;
+    --success: #27ae60; --warning: #f39c12; --danger: #c0392b;
+    --bg-card: #ffffff; --bg-page: #f5f7fa; --border: #eef2f6;
+    --text-primary: #1f3a6b; --text-secondary: #5e6f8d; --text-muted: #94a3b8;
+    --green-bg: #e6f7e6; --yellow-bg: #fff8e1; --red-bg: #ffedea;
+    --site-sz: #2a5298; --site-qd: #e67e22; --site-cd: #27ae60;
+    --source-cs: #27ae60; --source-cj: #e67e22; --source-qa: #2a5298;
+}
+
+/* ========== 布局 ========== */
+#app { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
+
+/* ========== 顶部栏 ========== */
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.header-title { font-size: 1.4rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+.header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.header-info { font-size: 0.78rem; color: var(--text-muted); }
+
+/* ========== 按钮 ========== */
+.btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 500; background: var(--bg-card); color: var(--text-primary); transition: all 0.15s; }
+.btn:hover { background: #f1f5f9; }
+.btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-sm { padding: 4px 10px; font-size: 0.72rem; }
+
+/* ========== 站点筛选按钮组 ========== */
+.site-filter { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.site-filter-btn { padding: 6px 14px; border: none; background: var(--bg-card); cursor: pointer; font-size: 0.8rem; color: var(--text-secondary); transition: all 0.15s; }
+.site-filter-btn:hover { background: #f1f5f9; }
+.site-filter-btn.active { background: var(--primary); color: white; font-weight: 600; }
+.site-filter-btn.active.sz-active { background: var(--site-sz); }
+.site-filter-btn.active.qd-active { background: var(--site-qd); }
+.site-filter-btn.active.cd-active { background: var(--site-cd); }
+
+/* ========== 周期选择器 ========== */
+.week-selector { display: flex; align-items: center; gap: 6px; }
+.week-nav-btn { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; color: var(--primary); }
+.week-nav-btn:hover { background: #f1f5f9; }
+.week-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.week-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: var(--bg-card); color: var(--text-primary); cursor: pointer; min-width: 180px; }
+
+/* ========== 加载/错误状态 ========== */
+.loading-spinner { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.loading-spinner .spinner { display: inline-block; width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-banner { background: var(--red-bg); border: 1px solid #f5c6cb; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; color: var(--danger); font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.info-banner { background: #e8f0fe; border: 1px solid #b6cff5; border-radius: 8px; padding: 10px 20px; margin-bottom: 20px; color: #2a5298; font-size: 0.85rem; }
+.error-banner .error-title { font-weight: 600; }
+.auth-panel { text-align: center; padding: 40px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; max-width: 500px; margin: 40px auto; }
+
+/* ========== KPI 卡片行 ========== */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 0; }
+.kpi-card .kpi-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.kpi-card .kpi-icon { font-size: 1.2rem; }
+.kpi-card .kpi-label { font-size: 0.82rem; color: var(--text-secondary); font-weight: 500; }
+.kpi-card .kpi-value { font-size: 2rem; font-weight: 700; color: var(--primary); margin: 4px 0; }
+.kpi-card .kpi-sub { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; }
+.kpi-card .kpi-trends { display: flex; gap: 12px; flex-wrap: wrap; }
+.kpi-trend-item { font-size: 0.78rem; display: flex; align-items: center; gap: 3px; }
+.kpi-trend-item .arrow { font-weight: 700; }
+.trend-up { color: var(--danger); }
+.trend-down { color: var(--success); }
+.trend-same { color: var(--primary-light); }
+
+/* ========== 区块 ========== */
+.section { background: var(--bg-card); border: 1px solid var(--border); margin-bottom: 24px; padding: 20px 24px; border-radius: 0; }
+.section-title { font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 3px solid var(--primary-light); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-title .section-meta { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+
+/* ========== 表格 ========== */
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.data-table th { background: #f8fafc; font-weight: 600; padding: 10px 10px; border-bottom: 2px solid var(--border); text-align: center; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+.data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: center; }
+.data-table tbody tr:nth-child(even) td { background: #fafcfd; }
+.data-table tbody tr:hover td { background: #f1f5f9; }
+.data-table .sortable { cursor: pointer; user-select: none; }
+.data-table .sortable:hover { color: var(--primary-light); }
+.data-table .sortable .sort-arrow { font-size: 0.65rem; margin-left: 2px; }
+.data-table .col-name { text-align: center; font-weight: 500; }
+.data-table .col-num { text-align: center; }
+
+/* 抽检明细表格：行间距紧凑 */
+#personTable td { padding: 4px 8px; }
+#personTable th { padding: 6px 10px; }
+
+/* ========== 标签 ========== */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.7rem; font-weight: 500; }
+.tag-green { background: var(--green-bg); color: var(--success); }
+.tag-yellow { background: var(--yellow-bg); color: #b45309; }
+.tag-red { background: var(--red-bg); color: var(--danger); }
+.site-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 500; }
+.site-tag.sz { background: #eef2ff; color: var(--site-sz); }
+.site-tag.qd { background: #fff3e0; color: var(--site-qd); }
+.site-tag.cd { background: #e6f7e6; color: var(--site-cd); }
+.source-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 500; }
+.source-tag.cs { background: #e6f7e6; color: var(--source-cs); }
+.source-tag.cj { background: #fff3e0; color: var(--source-cj); }
+.source-tag.qa { background: #eef2ff; color: var(--source-qa); }
+
+/* ========== 灯色行高亮 ========== */
+tr.row-green td { background: #f6fdf6 !important; }
+tr.row-yellow td { background: #fffdf5 !important; }
+tr.row-red td { background: #fef9f9 !important; }
+tr.row-err-low td { background: #f5c6cb !important; }
+tr.row-err-mid td { background: #fde8e8 !important; }
+
+/* ========== Tab切换 ========== */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+.tab-btn { padding: 8px 20px; border: none; background: transparent; cursor: pointer; font-size: 0.85rem; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+.tab-btn:hover { color: var(--primary); }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* ========== 失误分析布局 ========== */
+.error-analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.error-summary { background: #f8fafc; border: 1px solid var(--border); padding: 16px; }
+.error-summary .es-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; color: var(--primary); }
+.error-summary .es-stat { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.82rem; border-bottom: 1px dotted var(--border); }
+.error-summary .es-stat:last-child { border-bottom: none; }
+.error-summary .es-val { font-weight: 600; }
+.error-toplist { background: #f8fafc; border: 1px solid var(--border); padding: 16px; }
+.error-toplist .et-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; color: var(--primary); }
+.error-toplist .et-item { display: flex; align-items: center; padding: 5px 0; font-size: 0.8rem; border-bottom: 1px dotted var(--border); gap: 0; }
+.error-toplist .et-item:last-child { border-bottom: none; }
+.error-toplist .et-rank { flex: 0 0 30px; text-align: center; font-weight: 600; }
+.error-toplist .et-cat { flex: 0 0 140px; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.error-toplist .et-bar-wrap { flex: 1; height: 14px; background: #eef2f6; border-radius: 7px; overflow: hidden; display: flex; align-items: center; margin: 0 10px; }
+.error-toplist .et-bar { height: 100%; border-radius: 7px; transition: width 0.3s; margin-left: 0; }
+.error-toplist .et-count { flex: 0 0 85px; text-align: right; font-size: 0.8rem; }
+.error-toplist .et-trend { flex: 0 0 50px; text-align: center; font-size: 0.78rem; }
+.et-bar.cat-0 { background: #c0392b; }
+.et-bar.cat-1 { background: #e67e22; }
+.et-bar.cat-2 { background: #f39c12; }
+.et-bar.cat-3 { background: #2a5298; }
+.et-bar.cat-4 { background: #5e6f8d; }
+.et-bar-other { background: #b0b8c0; }
+
+/* ========== 分页 ========== */
+.pagination { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 16px; }
+.pagination button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.78rem; background: var(--bg-card); color: var(--text-primary); }
+.pagination button:hover { background: #f1f5f9; }
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination button.active { background: var(--primary); color: white; border-color: var(--primary); }
+.pagination .page-info { font-size: 0.78rem; color: var(--text-muted); padding: 0 8px; }
+
+/* ========== 弹窗 ========== */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+.modal-container { background: white; border: 1px solid var(--border); max-width: 900px; width: 95%; max-height: 85vh; overflow-y: auto; }
+.modal-header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 0.95rem; }
+.modal-close-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+.modal-body { padding: 16px 20px; }
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+    #app { padding: 12px; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .error-analysis-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; align-items: flex-start; }
+}
+
+/* ========== 打印 ========== */
+@media print {
+    body { background: white; }
+    .header-controls, .btn, .pagination, .tabs, .header-info { display: none !important; }
+    .section, .kpi-card { break-inside: avoid; box-shadow: none; }
+}
+
+/* ========== 工具 ========== */
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 0.78rem; }
+.fw-600 { font-weight: 600; }
+.mt-8 { margin-top: 8px; }
+.clickable { cursor: pointer; color: var(--primary-light); text-decoration: underline; }
+.clickable:hover { color: var(--danger); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+</head>
+<body>
+<div id="app">
+    <!-- 顶部栏 -->
+    <div class="header">
+        <div class="header-title">📊 品控周报分析</div>
+        <div class="header-controls">
+            <div class="week-selector">
+                <button class="week-nav-btn" id="btnPrevWeek" title="上一周">◀</button>
+                <select class="week-select" id="weekSelect"></select>
+                <button class="week-nav-btn" id="btnNextWeek" title="下一周">▶</button>
+                <button class="btn btn-primary" id="btnRefresh" style="margin-left:4px;">🔄</button>
+                <button class="btn btn-sm" onclick="screenshotSection('kpiRow','核心指标')" title="截图KPI卡片">📸</button>
+            </div>
+            <div class="site-filter" id="siteFilter">
+                <button class="site-filter-btn" data-site="all">🌐 全部</button>
+                <button class="site-filter-btn" data-site="深圳">深圳</button>
+                <button class="site-filter-btn" data-site="青岛">青岛</button>
+                <button class="site-filter-btn active cd-active" data-site="成都">成都</button>
+            </div>
+        </div>
+        <div class="header-info" id="headerInfo"></div>
+    </div>
+
+    <!-- 错误/授权横幅 -->
+    <div id="bannerArea"></div>
+
+    <!-- 加载状态 -->
+    <div id="loadingArea" class="loading-spinner"><div class="spinner"></div><div>正在从飞书加载数据...</div></div>
+
+    <!-- 核心指标 -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- 周报文本（自动生成，可复制） -->
+    <div class="section" id="reportSection" style="display:none;">
+        <div class="section-title">📝 周报文本（自动生成）
+            <span style="display:flex;align-items:center;gap:8px;">
+                <button class="btn btn-sm" id="btnCopyReport" style="margin-left:8px;" title="复制周报文本">📋 复制</button>
+                <button class="btn btn-sm" onclick="screenshotSection('reportSection','周报文本')" title="截图周报文本">📸</button>
+            </span>
+        </div>
+        <textarea id="reportText" readonly style="width:100%;height:230px;padding:12px 14px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;line-height:1.8;font-family:'PingFang SC','Microsoft YaHei',monospace;color:var(--text-primary);background:#fafcfd;resize:vertical;outline:none;"></textarea>
+        <div class="section-meta" style="margin-top:6px;font-size:0.75rem;color:var(--text-muted);">随周次/站点筛选自动更新，点击「复制」即可粘贴到周报</div>
+    </div>
+
+    <!-- 抽检明细 -->
+    <div class="section" id="personSection" style="display:none;">
+        <div class="section-title">👥 抽检明细 <button class="btn btn-sm" onclick="screenshotSection('personSection','抽检明细')" title="截图抽检明细" style="margin-left:8px;">📸</button> <span class="section-meta" id="personMeta"></span></div>
+        <div class="table-wrap">
+            <table class="data-table" id="personTable" style="table-layout:fixed;">
+                <thead>
+                    <tr>
+                        <th style="width:10%;">#</th>
+                        <th class="sortable" data-sort="name" style="width:10%;">姓名 <span class="sort-arrow"></span></th>
+                        <th style="width:10%;">站点</th>
+                        <th class="sortable col-num" data-sort="sampling" style="width:10%;">抽检量 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="panZe" style="width:10%;">判责量 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="coverage" style="width:10%;">覆盖率 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="errors" style="width:10%;">失误订单 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="accuracy" style="width:10%;">准确率 <span class="sort-arrow">▼</span></th>
+                        <th style="width:10%;">四周趋势</th>
+                        <th style="width:10%;">变化</th>
+                    </tr>
+                </thead>
+                <tbody id="personTbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 失误分析 -->
+    <div class="section" id="errorSection" style="display:none;">
+        <div class="section-title">🔍 失误分析 <button class="btn btn-sm" onclick="screenshotSection('errorSection','失误分析')" title="截图失误分析" style="margin-left:8px;">📸</button></div>
+        <div class="tabs" id="errorTabs">
+            <button class="tab-btn active" data-tab="初审">初审失误</button>
+            <button class="tab-btn" data-tab="抽检">抽检失误</button>
+            <button class="tab-btn" data-tab="QA">QA失误</button>
+        </div>
+        <span id="errorTotalBadge" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;align-self:center;"></span>
+        <div id="errorTabContent"></div>
+    </div>
+</div>
+
+<script>
+// ==================== 1. 配置常量 ====================
+const FEISHU_CONFIG = {
+    appId: 'cli_aab1fa4e87bbdbd3',
+    appSecret: '1uLKmOkzQpoac6Ixw3Qhsb6KR1gCrcTn',
+    spreadsheetToken: 'EdI0sn3qkh7H6wtkhcpcxrTnnDf',
+    sheets: [
+        // 失误表小：首批读表尾1500行（5周约250条，余量充足），读后按日期裁剪
+        { id: '4054dd', name: '初审失误登记', source: '初审', colDate: 0, colSite: 1, colQcCode: 3, colCategory: 6, colReviewer: 8, colNote: 9, colProduct: 5 },
+        { id: 'mEiT35', name: '抽检失误登记', source: '抽检', colDate: 0, colSite: 1, colQcCode: 3, colCategory: 10, colReviewer: 6, colNote: 11, colProduct: 5 },
+        { id: 'LIfICo', name: 'QA失误登记', source: 'QA', colDate: 0, colSite: 1, colQcCode: 2, colCategory: 4, colReviewer: 5, colNote: 6, colProduct: 3 }
+    ],
+    samplingSheets: [
+        // firstRows: 首批读表尾行数（约2周+余量）；fullRows: 5周+余量，二批读[fullRows, firstRows]区间
+        // 线上约300行/天、实物约750行/天：2周=4200/10500，5周=10500/26250
+        { id: 'HC6Mm6', name: '线上', type: 'online', token: 'D6FewOnrhiyLX7kuNFEcdHSZntx', firstRows: 7000, fullRows: 17000 },
+        { id: 'HIkyyf', name: '实物', type: 'physical', token: 'D6FewOnrhiyLX7kuNFEcdHSZntx', firstRows: 16000, fullRows: 38000 }
+    ],
+    // 判责量数据源（与优学堂后台一致：每人抽检/判责记录，动态月份tab）
+    panZeSheetToken: 'OwB7sBdCRhl2pwtgZP4c8F2Hn8e',
+    panZeSheetId: '8pTEgS'
+};
+
+const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都' };
+
+const FEISHU_PROXY_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co/functions/v1/feishu-proxy';
+const FEISHU_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmeHduaXhsdmR4YXdveWxoZ3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMDEyNzIsImV4cCI6MjA5Nzc3NzI3Mn0.aPfO4Ry_LzoOColCVx64JQPF-BWga-_J2fX9hg-E4G8';
+const SUPABASE_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co';
+const SUPABASE_KEY = FEISHU_SUPABASE_KEY;
+
+// ==================== 2. 全局状态 ====================
+let allErrors = [];           // 失误数据
+let samplingData = { online: [], physical: [] }; // 抽检原始数据
+let panZeRecords = [];        // 判责/抽检记录 [{date, name, site}] 来自8pTEgS表
+let panZeSupabaseDaily = [];  // 判责量每日数据 [{dateStr, map:{name:count}}] 来自Supabase
+let currentWeekIndex = 0;     // 0=本周, 1=上周, 2=前周, 3=前三周
+let weekOptions = [];         // 可用周选项
+let personSortCol = 'accuracy'; // 当前排序列
+let personSortAsc = true;       // 排序方向（准确率默认升序：低的在前=需关注）
+let activeErrorTab = '初审';  // 当前失误分析Tab
+let currentSite = '成都';       // 当前站点筛选：默认成都
+let dataReady = false;
+
+// ==================== 2b. 名字修正（与优学堂后台 fixFeishuChouJianName 一致） ====================
+const PANZE_NAME_FIX = { '吴晖':'吴辉','樊昱舜':'樊景舜','樊慧舞':'樊景舜','李思林':'李忠林','姜钧琪':'麦钧淇' };
+function fixPanZeName(name) {
+    name = String(name || '').trim();
+    if (!name) return name;
+    // 精确修正
+    if (PANZE_NAME_FIX[name]) return PANZE_NAME_FIX[name];
+    // 在 SITE_MAP 中的所有有效名字
+    var validNames = Object.keys(SITE_MAP);
+    if (validNames.indexOf(name) >= 0) return name;
+    // 编辑距离≤1模糊匹配
+    var bestName = null, bestDist = 999;
+    for (var vi = 0; vi < validNames.length; vi++) {
+        var valid = validNames[vi];
+        var m = name.length, n = valid.length;
+        var dp = []; for (var di = 0; di <= m; di++) { dp[di] = [di]; }
+        for (var dj = 1; dj <= n; dj++) dp[0][dj] = dj;
+        for (var di2 = 1; di2 <= m; di2++) {
+            for (var dj2 = 1; dj2 <= n; dj2++) {
+                dp[di2][dj2] = Math.min(dp[di2-1][dj2]+1, dp[di2][dj2-1]+1, dp[di2-1][dj2-1]+(name[di2-1]===valid[dj2-1]?0:1));
+            }
+        }
+        if (dp[m][n] < bestDist) { bestDist = dp[m][n]; bestName = valid; }
+    }
+    return (bestDist <= 1 && bestName) ? bestName : name;
+}
+
+// ==================== 3. 飞书 API ====================
+async function feishuApiFetch(url, options) {
+    options = options || {};
+    var proxyHeaders = {
+        'Authorization': 'Bearer ' + FEISHU_SUPABASE_KEY,
+        'x-target-url': url,
+        'x-target-method': options.method || 'GET'
+    };
+    if (options.headers && options.headers['Authorization']) {
+        proxyHeaders['x-target-auth'] = options.headers['Authorization'];
+    }
+    if (options.headers && options.headers['Content-Type']) {
+        proxyHeaders['x-target-content-type'] = options.headers['Content-Type'];
+    }
+    // gzip压缩传输：大表JSON压缩率达10倍以上，实测161KB vs 2.16MB、2.3s vs 9.7s
+    proxyHeaders['Accept-Encoding'] = 'gzip';
+    var resp = await fetch(FEISHU_PROXY_URL, {
+        method: 'POST',
+        headers: proxyHeaders,
+        body: options.body || undefined
+    });
+    if (!resp.ok) {
+        var errText = await resp.text();
+        throw new Error('代理请求失败: ' + resp.status + ' ' + errText);
+    }
+    var data = await resp.json();
+    if (data.error) { throw new Error(JSON.stringify(data.error)); }
+    return { ok: true, json: function() { return Promise.resolve(data); } };
+}
+
+async function fetchFeishuSheet(spreadsheetToken, sheetId, token, range) {
+    var url = 'https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/' + spreadsheetToken + '/values/' + sheetId + (range ? '!' + range : '') + '?majorDimension=ROWS';
+    var resp = await feishuApiFetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    var data = await resp.json();
+    if (data.code !== 0) throw new Error(data.msg || '请求失败');
+    return (data.data && data.data.valueRange && data.data.valueRange.values) || [];
+}
+
+// ==================== 4. Token管理 ====================
+function getLocalToken() {
+    var stored = null;
+    try { stored = JSON.parse(localStorage.getItem('feishu_token') || 'null'); } catch(e) {}
+    if (stored && stored.expiresAt > Date.now() + 60000) {
+        if (stored.expiresAt < Date.now() + 300000 && stored.refresh_token) {
+            feishuRefreshToken();
+        }
+        return stored.access_token;
+    }
+    return null;
+}
+
+async function feishuRefreshToken() {
+    var stored = null;
+    try { stored = JSON.parse(localStorage.getItem('feishu_token') || 'null'); } catch(e) {}
+    if (!stored || !stored.refresh_token) return null;
+    try {
+        var body = JSON.stringify({ app_id: FEISHU_CONFIG.appId, app_secret: FEISHU_CONFIG.appSecret, grant_type: 'refresh_token', refresh_token: stored.refresh_token });
+        var resp = await feishuApiFetch('https://open.feishu.cn/open-apis/authen/v1/refresh_access_token', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body
+        });
+        var data = await resp.json();
+        if (data.code === 0 && data.data) {
+            saveToken(data.data.access_token, data.data.refresh_token, data.data.expires_in);
+            return data.data.access_token;
+        }
+    } catch(e) {}
+    return null;
+}
+
+async function getCloudToken() {
+    try {
+        var resp = await fetch(SUPABASE_URL + '/rest/v1/app_data?select=value&key=eq.feishu_token', {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        });
+        var rows = await resp.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+            var stored = JSON.parse(rows[0].value);
+            if (stored && stored.expiresAt > Date.now() + 60000) {
+                localStorage.setItem('feishu_token', rows[0].value);
+                return stored.access_token;
+            }
+        }
+    } catch(e) {}
+    return null;
+}
+
+async function getTenantToken() {
+    var stored = null;
+    try { stored = JSON.parse(localStorage.getItem('feishu_tenant_token') || 'null'); } catch(e) {}
+    if (stored && stored.expiresAt > Date.now() + 60000) return stored.access_token;
+    try {
+        var body = JSON.stringify({ app_id: FEISHU_CONFIG.appId, app_secret: FEISHU_CONFIG.appSecret });
+        var resp = await feishuApiFetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body
+        });
+        var data = await resp.json();
+        if (data.code === 0 && data.tenant_access_token) {
+            var tokenData = { access_token: data.tenant_access_token, expiresAt: Date.now() + (data.expire || 7200) * 1000 - 60000 };
+            localStorage.setItem('feishu_tenant_token', JSON.stringify(tokenData));
+            return tokenData.access_token;
+        }
+    } catch(e) {}
+    if (stored && stored.expiresAt > Date.now()) return stored.access_token;
+    return null;
+}
+
+function saveToken(token, refreshToken, expiresIn) {
+    var tokenData = { access_token: token, refresh_token: refreshToken, expiresAt: Date.now() + expiresIn * 1000 };
+    localStorage.setItem('feishu_token', JSON.stringify(tokenData));
+    try {
+        fetch(SUPABASE_URL + '/rest/v1/app_data', {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify({ key: 'feishu_token', value: JSON.stringify(tokenData), updated_at: new Date().toISOString() })
+        }).catch(function(){});
+    } catch(e) {}
+}
+
+async function acquireToken() {
+    var token = getLocalToken();
+    if (token) return token;
+    token = await feishuRefreshToken();
+    if (token) return token;
+    token = await getCloudToken();
+    if (token) return token;
+    token = await getTenantToken();
+    return token;
+}
+
+async function exchangeCodeForToken(code) {
+    if (!code || !code.trim()) return { success: false, error: '授权码为空' };
+    code = code.trim();
+    try {
+        var appResp = await feishuApiFetch('https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ app_id: FEISHU_CONFIG.appId, app_secret: FEISHU_CONFIG.appSecret })
+        });
+        var appData = await appResp.json();
+        if (appData.code !== 0) return { success: false, error: '获取app_token失败: ' + (appData.msg || appData.code) };
+        var tokenResp = await feishuApiFetch('https://open.feishu.cn/open-apis/authen/v1/oidc/access_token', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + appData.app_access_token },
+            body: JSON.stringify({ grant_type: 'authorization_code', code: code })
+        });
+        var tokenData = await tokenResp.json();
+        if (tokenData.code === 0 && tokenData.data) {
+            saveToken(tokenData.data.access_token, tokenData.data.refresh_token, tokenData.data.expires_in);
+            return { success: true };
+        }
+        return { success: false, error: tokenData.msg || ('code: ' + tokenData.code) };
+    } catch(e) { return { success: false, error: e.message }; }
+}
+
+function showAuthUI() {
+    var baseUrl = encodeURIComponent(window.location.origin + window.location.pathname.replace(/\/?$/, '/'));
+    var authUrl = 'https://open.feishu.cn/open-apis/authen/v1/authorize?app_id=' + FEISHU_CONFIG.appId + '&redirect_uri=' + baseUrl + '&scope=sheets:spreadsheet:readonly%20drive:drive:readonly';
+    document.getElementById('loadingArea').style.display = 'none';
+    document.getElementById('bannerArea').innerHTML =
+        '<div class="auth-panel">' +
+            '<div style="font-size:1.3rem;margin-bottom:8px;">🔐 需要飞书授权</div>' +
+            '<p style="color:#5e6f8d;font-size:0.85rem;margin-bottom:20px;">请先授权以读取飞书表格数据（与优学堂共享授权状态）</p>' +
+            '<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">' +
+                '<div style="flex:1;min-width:150px;">' +
+                    '<div style="font-size:0.75rem;color:#5e6f8d;margin-bottom:6px;">💻 电脑端</div>' +
+                    '<a href="' + authUrl + '" style="display:inline-block;background:#1f3a6b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600;">🔗 前往飞书授权</a>' +
+                    '<p style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">授权后复制code到右侧激活</p>' +
+                '</div>' +
+                '<div style="flex:1;min-width:150px;">' +
+                    '<div style="font-size:0.75rem;color:#5e6f8d;margin-bottom:6px;">📝 手动激活</div>' +
+                    '<input id="manualCodeInput" type="text" placeholder="粘贴授权码…" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.8rem;text-align:center;font-family:monospace;margin-bottom:8px;">' +
+                    '<button id="manualCodeBtn" style="width:100%;padding:8px;background:#2a5298;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;">🔓 激活</button>' +
+                    '<div id="manualCodeMsg" style="margin-top:6px;font-size:0.7rem;min-height:18px;"></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    document.getElementById('manualCodeBtn').onclick = async function() {
+        var code = document.getElementById('manualCodeInput').value;
+        var btn = this; btn.disabled = true; btn.textContent = '⏳';
+        var r = await exchangeCodeForToken(code);
+        if (r.success) { await initData(); }
+        else { btn.disabled = false; btn.textContent = '🔓 激活'; document.getElementById('manualCodeMsg').textContent = '❌ ' + r.error; document.getElementById('manualCodeMsg').style.color = '#c0392b'; }
+    };
+}
+
+// ==================== 5. 日期工具 ====================
+function excelSerialToDate(serial) {
+    // 用 UTC 取日期部分 + Math.round 消除 46188.99999999 类浮点误差（避免时区偏移导致日期+1天）
+    var d = new Date(Math.round((serial - 25569) * 86400) * 1000);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+function formatDate(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function formatShortDate(d) {
+    return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+}
+
+function getWeekLabel(monday) {
+    var d = monday.getDate(), m = monday.getMonth(), y = monday.getFullYear();
+    var logicM = d >= 27 ? m + 1 : m;
+    if (logicM > 11) { logicM = 0; y++; }
+    var startM = logicM - 1;
+    if (startM < 0) { startM = 11; y--; }
+    var firstMon = new Date(y, startM, 27);
+    while (firstMon.getDay() !== 1) firstMon.setDate(firstMon.getDate() + 1);
+    var wn = Math.floor((monday - firstMon) / (7 * 86400000)) + 1;
+    if (wn > 4) wn = 4;
+    return (logicM + 1) + '月第' + wn + '周';
+}
+
+function getMonday(date) {
+    var d = new Date(date);
+    var day = d.getDay();
+    var diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function getSunday(monday) {
+    var d = new Date(monday);
+    d.setDate(d.getDate() + 6);
+    d.setHours(23, 59, 59, 999);
+    return d;
+}
+
+function buildWeekOptions() {
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var thisMonday = getMonday(today);
+    var options = [];
+    for (var w = 0; w < 5; w++) {
+        var monday = new Date(thisMonday);
+        monday.setDate(thisMonday.getDate() - w * 7);
+        var sunday = getSunday(monday);
+        var label = getWeekLabel(monday) + '（' + formatShortDate(monday) + '~' + formatShortDate(sunday) + '）';
+        options.push({ label: label, monday: monday, sunday: sunday, isCurrent: w === 0 });
+    }
+    return options;
+}
+
+function parseDateValue(val) {
+    if (!val) return null;
+    if (val instanceof Date) {
+        if (isNaN(val.getTime())) return null;
+        return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+    }
+    var str = String(val).trim();
+    if (!str || str === '日期' || str === '时间') return null;
+    // 纯数字：Excel序列号（40000-100000）或 8位 YYYYMMDD
+    if (/^\d+(\.\d+)?$/.test(str)) {
+        var num = parseFloat(str);
+        if (num > 40000 && num < 100000) return excelSerialToDate(num);
+        if (/^\d{8}$/.test(str)) {
+            var y8 = parseInt(str.substring(0, 4)), m8 = parseInt(str.substring(4, 6)), d8 = parseInt(str.substring(6, 8));
+            if (y8 >= 2000 && m8 >= 1 && m8 <= 12 && d8 >= 1 && d8 <= 31) return new Date(y8, m8 - 1, d8);
+        }
+        // 含小数但不在序列号范围（如 "8.9" 表示 8月9日）→ 继续尝试下方日期格式
+        if (str.indexOf('.') < 0) return null;
+    }
+    // 带年份：2026年8月9日 / 2026-08-09 / 2026/8/9 / 2026.8.9（可带时间后缀）
+    var m = str.match(/(\d{4})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})/);
+    if (m) {
+        var yy = parseInt(m[1]), mm = parseInt(m[2]), dd = parseInt(m[3]);
+        if (yy >= 2000 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+            return new Date(yy, mm - 1, dd);
+        }
+    }
+    // 无年份：8月9日 / 8-9 / 8/9 / 8.9 → 补当年
+    var m2 = str.match(/^(\d{1,2})[月\/\-\.](\d{1,2})/);
+    if (m2) {
+        var mm2 = parseInt(m2[1]), dd2 = parseInt(m2[2]);
+        if (mm2 >= 1 && mm2 <= 12 && dd2 >= 1 && dd2 <= 31) {
+            return new Date(new Date().getFullYear(), mm2 - 1, dd2);
+        }
+    }
+    return null;
+}
+
+function isInWeek(dateObj, monday, sunday) {
+    return dateObj >= monday && dateObj <= sunday;
+}
+
+// ==================== 6. 数据拉取 ====================
+// 从 Supabase 拉取判责量（每日 feishu_panze_YYYY-MM-DD 汇总键：每人当日判责总数）
+async function fetchPanZeSupabase(monday, sunday) {
+    var dailyList = [];
+    try {
+        var cur = new Date(monday);
+        var end = new Date(sunday);
+        var dates = [];
+        while (cur <= end) {
+            dates.push({ dateStr: formatDate(cur), date: new Date(cur) });
+            cur.setDate(cur.getDate() + 1);
+        }
+        // 8周=56天并行请求（原为串行，是加载慢的主因之一）
+        var results = await Promise.all(dates.map(function(d) {
+            var key = 'feishu_panze_' + d.dateStr;
+            return fetch(SUPABASE_URL + '/rest/v1/app_data?key=eq.' + encodeURIComponent(key) + '&select=value&limit=1', {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            }).then(function(resp) { return resp.json(); }).then(function(data) {
+                if (data && data.length > 0 && data[0].value) {
+                    var found = JSON.parse(data[0].value);
+                    if (found.map) return { dateStr: d.dateStr, date: d.date, map: found.map };
+                }
+                return null;
+            }).catch(function() { return null; });
+        }));
+        results.forEach(function(r) { if (r) dailyList.push(r); });
+    } catch(e) {}
+    return dailyList;
+}
+
+var _sheetRowCounts = null; // 缓存sheets/query结果，两阶段加载共用
+
+async function fetchAllData(token, phase) {
+    // phase: 'first2'=最近2周（第一批，先渲染）| 'rest2'=第3~5周（第二批，后台补充）
+    var isRest = (phase === 'rest2');
+    var phaseLabel = isRest ? '[二批]' : '[首批]';
+    var wkOpts = buildWeekOptions();
+
+    // 先查所有sheet的行数（元数据，很快），两阶段共用缓存
+    if (!_sheetRowCounts) {
+        _sheetRowCounts = {};
+        try {
+            var sqUrl = 'https://open.feishu.cn/open-apis/sheets/v3/spreadsheets/' + FEISHU_CONFIG.spreadsheetToken + '/sheets/query';
+            var sqResp = await feishuApiFetch(sqUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+            var sqData = await sqResp.json();
+            if (sqData.code === 0 && sqData.data && sqData.data.sheets) {
+                sqData.data.sheets.forEach(function(s) {
+                    _sheetRowCounts[s.sheet_id] = (s.grid_properties && s.grid_properties.row_count) || 0;
+                });
+            }
+            console.log('[计时] sheets/query 行数:', JSON.stringify(_sheetRowCounts));
+        } catch(e) {
+            console.warn('[计时] sheets/query 失败，退化为全量读取:', e.message);
+        }
+    }
+    var sheetRowCounts = _sheetRowCounts;
+
+    // Supabase判责量（每日 feishu_panze_* 同步数据）：首批拉最近2周，二批拉第3~5周
+    // 独立域名，与飞书请求并行，不参与飞书串行队列
+    var supabaseTask = (async function() {
+        var t0 = Date.now();
+        try {
+            var monday, sunday;
+            if (isRest) { monday = wkOpts[4].monday; sunday = wkOpts[2].sunday; }
+            else { monday = wkOpts[1].monday; sunday = wkOpts[0].sunday; }
+            var dailyList = await fetchPanZeSupabase(monday, sunday);
+            console.log('[计时] ' + phaseLabel + ' Supabase判责量 耗时 ' + (Date.now() - t0) + 'ms, 拿到 ' + dailyList.length + ' 天');
+            return { ok: true, type: 'panze_supabase', name: 'Supabase判责量', dailyList: dailyList };
+        } catch(e) {
+            console.log('[计时] ' + phaseLabel + ' Supabase判责量 失败 耗时 ' + (Date.now() - t0) + 'ms: ' + e.message);
+            return { ok: false, type: 'panze_supabase', name: 'Supabase判责量', error: e.message };
+        }
+    })();
+
+    var tAll = Date.now();
+    var results = [];
+    // 飞书请求串行执行：同一文档的并发请求会被飞书限流互相拖慢（实测单请求1.4秒 vs 并发14秒）
+    // 行数估算 + 读后按日期过滤：读表尾固定行数（覆盖所需周数+余量），内存精确裁剪到日期范围
+    try {
+        // 失误数据：表小，首批直接读表尾1500行（覆盖5周约250条，余量充足），二批跳过
+        for (var i = 0; i < FEISHU_CONFIG.sheets.length; i++) {
+            var sh = FEISHU_CONFIG.sheets[i];
+            var t0 = Date.now();
+            try {
+                if (isRest) {
+                    console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 无需读取（首批已覆盖5周）');
+                    results.push({ ok: true, source: sh.source, name: sh.name, rows: [] });
+                    continue;
+                }
+                var rc = sheetRowCounts[sh.id] || 0;
+                var est = Math.max(2, rc - 1499);
+                var rows = await fetchFeishuSheet(FEISHU_CONFIG.spreadsheetToken, sh.id, token, 'A' + est + ':Z' + rc);
+                console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 耗时 ' + (Date.now() - t0) + 'ms, 行数 ' + rows.length + ' (range:A' + est + ':Z' + rc + ')');
+                results.push({ ok: true, source: sh.source, name: sh.name, rows: rows, colDate: sh.colDate, colSite: sh.colSite, colQcCode: sh.colQcCode, colCategory: sh.colCategory, colReviewer: sh.colReviewer, colNote: sh.colNote, colProduct: sh.colProduct });
+            } catch(e) {
+                console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 失败 耗时 ' + (Date.now() - t0) + 'ms: ' + e.message);
+                results.push({ ok: false, source: sh.source, name: sh.name, error: e.message });
+            }
+        }
+        // 抽检数据源：首批读表尾firstRows行（约2周+余量），二批读[fullRows, firstRows]区间（第3~5周）
+        for (var j = 0; j < FEISHU_CONFIG.samplingSheets.length; j++) {
+            var sh2 = FEISHU_CONFIG.samplingSheets[j];
+            var t0b = Date.now();
+            try {
+                var rc2 = sheetRowCounts[sh2.id] || 0;
+                var est2, upper2;
+                if (isRest) {
+                    est2 = Math.max(2, rc2 - sh2.fullRows + 1);
+                    upper2 = rc2 - sh2.firstRows;
+                } else {
+                    est2 = Math.max(2, rc2 - sh2.firstRows + 1);
+                    upper2 = rc2;
+                }
+                if (upper2 < est2) {
+                    console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 无需读取');
+                    results.push({ ok: true, type: sh2.type, name: sh2.name, rows: [] });
+                    continue;
+                }
+                var rows2 = await fetchFeishuSheet(sh2.token, sh2.id, token, 'A' + est2 + ':Z' + upper2);
+                console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 耗时 ' + (Date.now() - t0b) + 'ms, 行数 ' + rows2.length + ' (range:A' + est2 + ':Z' + upper2 + ')');
+                results.push({ ok: true, type: sh2.type, name: sh2.name, rows: rows2 });
+            } catch(e) {
+                console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 失败 耗时 ' + (Date.now() - t0b) + 'ms: ' + e.message);
+                results.push({ ok: false, type: sh2.type, name: sh2.name, error: e.message });
+            }
+        }
+    } finally {
+        results.push(await supabaseTask);
+    }
+    console.log('[计时] ' + phaseLabel + ' 本阶段完成 总耗时 ' + (Date.now() - tAll) + 'ms');
+    return results;
+}
+
+// 合并两阶段结果：二批(第3~5周)在前、首批(最近2周)在后（rows均已去表头并按日期裁剪，直接拼接）
+function mergePhaseResults(firstList, restList) {
+    return firstList.map(function(r) {
+        if (!r.ok) return r;
+        var mate = null;
+        for (var i = 0; i < restList.length; i++) {
+            if (restList[i].ok && restList[i].name === r.name) { mate = restList[i]; break; }
+        }
+        if (!mate) return r;
+        if (r.rows && mate.rows && mate.rows.length > 0) {
+            return Object.assign({}, r, { rows: mate.rows.concat(r.rows) });
+        }
+        if (r.dailyList && mate.dailyList && mate.dailyList.length > 0) {
+            return Object.assign({}, r, { dailyList: mate.dailyList.concat(r.dailyList) });
+        }
+        return r;
+    });
+}
+
+function processResults(results) {
+    var errors = [];
+    var sampling = { online: [], physical: [] };
+    var status = {};
+
+    results.forEach(function(res) {
+        if (!res.ok) {
+            status[res.name || res.source || res.type] = { ok: false, error: res.error };
+            return;
+        }
+        if (res.source) {
+            // 失误数据（fetchAllData已去表头并按日期裁剪，从第0行遍历）
+            status[res.name] = { ok: true, count: (res.rows || []).length };
+            for (var r = 0; r < res.rows.length; r++) {
+                var row = res.rows[r];
+                if (!row || row.length === 0) continue;
+                var dateVal = row[res.colDate];
+                if (dateVal === null || dateVal === undefined || dateVal === '日期') continue;
+                var dateObj = parseDateValue(dateVal);
+                if (!dateObj) continue;
+                var category = (row[res.colCategory] || '').toString().trim();
+                var reviewer = (row[res.colReviewer] || '').toString().trim();
+                reviewer = reviewer.replace(/解答失误$/, '').replace(/解答$/, '').trim();
+                var note = (row[res.colNote] || '').toString().trim();
+                var site = (row[res.colSite] || '').toString().trim();
+                if (!site && SITE_MAP[reviewer]) site = SITE_MAP[reviewer];
+                var qcCode = (row[res.colQcCode] || '').toString().trim();
+                var product = res.colProduct >= 0 ? ((row[res.colProduct] || '') + '').trim() : '';
+                if (!category && !note) continue;
+                errors.push({
+                    date: dateObj, dateStr: formatDate(dateObj),
+                    site: site, qcCode: qcCode, category: category || '-',
+                    reviewer: reviewer || '-', note: note || '-',
+                    product: product || '-', source: res.source
+                });
+            }
+        } else if (res.type === 'panze') {
+            // 判责数据源（来自8pTEgS表）
+            status[res.name] = { ok: true, count: (res.records || []).length };
+            panZeRecords = res.records || [];
+        } else if (res.type === 'panze_supabase') {
+            // Supabase判责量（每日feishu_panze_*同步）
+            status[res.name] = { ok: true, count: (res.dailyList || []).length };
+            panZeSupabaseDaily = res.dailyList || [];
+        } else if (res.type) {
+            // 抽检数据源（线上/实物）（fetchAllData已去表头并按日期裁剪，从第0行遍历）
+            status[res.name] = { ok: true, count: (res.rows || []).length };
+            var arr = res.type === 'online' ? sampling.online : sampling.physical;
+            for (var r2 = 0; r2 < res.rows.length; r2++) {
+                var row2 = res.rows[r2];
+                if (!row2 || !row2[0]) continue;
+                var dateObj2 = parseDateValue(row2[0]);
+                if (!dateObj2) continue;
+                var site2 = String(row2[1] || '').trim();
+                var reviewer2 = String(row2[5] || '').trim();  // F列=初审人（抽检明细表的抽检量按初审人计数）
+                var sampler2 = String(row2[6] || '').trim();   // G列=抽检人（周报文本括号按抽检人计数）
+                arr.push({ date: dateObj2, site: site2, reviewer: reviewer2, sampler: sampler2 });
+            }
+        }
+    });
+
+    errors.sort(function(a, b) { return b.date - a.date; });
+    return { errors: errors, sampling: sampling, status: status };
+}
+
+// ==================== 7. 数据聚合计算 ====================
+function siteMatch(item, siteFilter) {
+    if (siteFilter === 'all') return true;
+    return item.site === siteFilter;
+}
+
+function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
+    siteFilter = siteFilter || 'all';
+    // 过滤本周失误 + 站点
+    var weekErrors = errors.filter(function(e) { return isInWeek(e.date, monday, sunday) && siteMatch(e, siteFilter); });
+
+    // 过滤本周抽检（线上+实物订单量）+ 站点
+    var onlineInWeek = sampling.online.filter(function(s) { return isInWeek(s.date, monday, sunday) && siteMatch(s, siteFilter); });
+    var physicalInWeek = sampling.physical.filter(function(s) { return isInWeek(s.date, monday, sunday) && siteMatch(s, siteFilter); });
+
+    var onlineCount = onlineInWeek.length;
+    var physicalCount = physicalInWeek.length;
+    var totalSampling = onlineCount + physicalCount;
+
+    // 按人聚合抽检量（线上+实物表按G列抽检人计数，与周报文本同一口径；不再读判责表）
+    var personSampling = {};
+    onlineInWeek.forEach(function(s) {
+        var name = fixPanZeName(s.reviewer);
+        if (!name) return;
+        if (!personSampling[name]) personSampling[name] = { sampling: 0, online: 0, physical: 0, site: s.site };
+        personSampling[name].sampling++;
+        personSampling[name].online++;
+        if (!personSampling[name].site && SITE_MAP[name]) personSampling[name].site = SITE_MAP[name];
+    });
+    physicalInWeek.forEach(function(s) {
+        var name = fixPanZeName(s.reviewer);
+        if (!name) return;
+        if (!personSampling[name]) personSampling[name] = { sampling: 0, online: 0, physical: 0, site: s.site };
+        personSampling[name].sampling++;
+        personSampling[name].physical++;
+        if (!personSampling[name].site && SITE_MAP[name]) personSampling[name].site = SITE_MAP[name];
+    });
+
+    // 按人聚合判责量（来自Supabase每日同步 feishu_panze_*，按周过滤）
+    var personPanZeSupabase = {};
+    (panZeSupabaseDaily || []).forEach(function(daily) {
+        if (isInWeek(daily.date, monday, sunday)) {
+            var map = daily.map || {};
+            Object.keys(map).forEach(function(name) {
+                // 站点过滤：选具体站点时只保留该站点的人，无站点归属的人仅在"全部"中显示
+                if (siteFilter !== 'all') {
+                    var personSite = SITE_MAP[name] || '';
+                    if (personSite !== siteFilter) return;
+                }
+                // map值 = {品类:数量}，每人当日判责量 = 各品类求和
+                var v = map[name];
+                var count = 0;
+                if (v && typeof v === 'object') {
+                    Object.keys(v).forEach(function(k) { count += Number(v[k]) || 0; });
+                } else {
+                    count = Number(v) || 0;
+                }
+                personPanZeSupabase[name] = (personPanZeSupabase[name] || 0) + count;
+            });
+        }
+    });
+
+
+    // 按人聚合失误量（按来源分）
+    var personErrors = {};
+    weekErrors.forEach(function(e) {
+        var name = e.reviewer || '未知';
+        if (!personErrors[name]) personErrors[name] = { total: 0, 初审: 0, 抽检: 0, QA: 0 };
+        personErrors[name].total++;
+        if (e.source === '初审') personErrors[name]['初审']++;
+        else if (e.source === '抽检') personErrors[name]['抽检']++;
+        else if (e.source === 'QA') personErrors[name]['QA']++;
+    });
+
+    // 按人合并
+    var allNames = new Set();
+    Object.keys(personSampling).forEach(function(n) { allNames.add(n); });
+    Object.keys(personErrors).forEach(function(n) { allNames.add(n); });
+    Object.keys(personPanZeSupabase).forEach(function(n) { allNames.add(n); });
+
+    var personStats = [];
+    allNames.forEach(function(name) {
+        var s = personSampling[name] || { sampling: 0, online: 0, physical: 0, site: SITE_MAP[name] || '' };
+        var e = personErrors[name] || { total: 0, 初审: 0, 抽检: 0, QA: 0 };
+        var pz = personPanZeSupabase[name] || 0;
+        var cjErrs = e['抽检'] || 0;  // 只算抽检失误
+        var acc = s.sampling > 0 ? ((s.sampling - cjErrs) / s.sampling * 100) : 100; // 准确率=抽检失误
+        var cov = pz > 0 ? Math.min(100, s.sampling / pz * 100) : 0;        // 覆盖率=抽检量/判责量
+        personStats.push({
+            name: name,
+            site: s.site || SITE_MAP[name] || '',
+            sampling: s.sampling,
+            online: s.online,
+            physical: s.physical,
+            panZe: pz,
+            errors: cjErrs,  // 只显示抽检失误
+            errorsCS: e['初审'],
+            errorsCJ: e['抽检'],
+            errorsQA: e['QA'],
+            rate: s.sampling > 0 ? (cjErrs / s.sampling * 100) : 0,
+            accuracy: acc,
+            coverage: cov
+        });
+    });
+
+    // 失误类别聚合（按来源分）
+    var categoriesBySource = { 初审: {}, 抽检: {}, QA: {} };
+    weekErrors.forEach(function(e) {
+        var src = e.source;
+        if (!categoriesBySource[src]) categoriesBySource[src] = {};
+        var cat = e.category;
+        categoriesBySource[src][cat] = (categoriesBySource[src][cat] || 0) + 1;
+    });
+
+    var categoryStats = {};
+    Object.keys(categoriesBySource).forEach(function(src) {
+        var cats = categoriesBySource[src];
+        var sorted = Object.keys(cats).map(function(c) { return { name: c, count: cats[c] }; });
+        sorted.sort(function(a, b) { return b.count - a.count; });
+        categoryStats[src] = sorted;
+    });
+
+    // 抽检覆盖率相关
+    var sampledPeople = Object.keys(personSampling).length;
+    var allPeople = allNames.size;
+
+    // 判责量：使用Supabase每日同步数据（优学堂后台每日汇总的每人判责总数）
+    var supabaseTotal = 0;
+    Object.keys(personPanZeSupabase).forEach(function(n) { supabaseTotal += personPanZeSupabase[n]; });
+    var judgmentCount = supabaseTotal;
+
+    // 抽检覆盖率 = 抽检量 / 判责量（注意：必须在judgmentCount之后计算）
+    var coverage = judgmentCount > 0 ? (totalSampling / judgmentCount * 100) : 0;
+
+    // 抽检准确率 = (抽检量 - 抽检失误量) / 抽检量
+    var cjErrors = weekErrors.filter(function(e) { return e.source === '抽检'; }).length;
+    var accuracy = totalSampling > 0 ? ((totalSampling - cjErrors) / totalSampling * 100) : 100;
+
+    // 有效抽检天数
+    var distinctDates = {};
+    onlineInWeek.forEach(function(s) { distinctDates[formatDate(s.date)] = 1; });
+    physicalInWeek.forEach(function(s) { distinctDates[formatDate(s.date)] = 1; });
+    var activeDays = Object.keys(distinctDates).length;
+
+    // 抽检日均人效 = 抽检量 / 有效天数
+    var dailyAvgEfficiency = activeDays > 0 ? Math.round(totalSampling / activeDays) : 0;
+
+    // 判责准确率 = (判责量 - 总失误数) / 判责量
+    var panZeAccuracy = judgmentCount > 0 ? ((judgmentCount - weekErrors.length) / judgmentCount * 100) : 100;
+
+    return {
+        monday: monday, sunday: sunday,
+        onlineCount: onlineCount, physicalCount: physicalCount,
+        totalSampling: totalSampling,
+        judgmentCount: judgmentCount,  // 判责量（优先Supabase每日同步，降级飞书8pTEgS）
+        coverage: coverage,
+        accuracy: accuracy,
+        cjErrors: cjErrors,
+        csErrors: weekErrors.filter(function(e) { return e.source === '初审'; }).length,
+        qaErrors: weekErrors.filter(function(e) { return e.source === 'QA'; }).length,
+        totalErrors: weekErrors.length,
+        activeDays: activeDays,
+        dailyAvgEfficiency: dailyAvgEfficiency,
+        panZeAccuracy: panZeAccuracy,
+        personStats: personStats,
+        categoryStats: categoryStats,
+        personCount: allPeople,
+        sampledCount: sampledPeople
+    };
+}
+
+function computeAllWeeks(errors, sampling, panZe, weekOptions, siteFilter) {
+    return weekOptions.map(function(opt) {
+        return computeWeekData(errors, sampling, panZe, opt.monday, opt.sunday, siteFilter);
+    });
+}
+
+function computeTrend(current, previous, sensitive) {
+    if (!previous || previous === 0) return { text: '--', cls: 'trend-same', arrow: '→', pct: 0 };
+    if (sensitive) {
+        // 高精度指标（如准确率）：直接用百分点差值，阈值 0.005pp
+        var pp = current - previous;
+        if (Math.abs(pp) < 0.005) return { text: '→持平', cls: 'trend-same', arrow: '→', pct: 0 };
+        if (pp > 0) return { text: '↑' + Math.abs(pp).toFixed(2) + 'pp', cls: 'trend-up', arrow: '↑', pct: pp };
+        return { text: '↓' + Math.abs(pp).toFixed(2) + 'pp', cls: 'trend-down', arrow: '↓', pct: pp };
+    }
+    var pct = (current - previous) / previous * 100;
+    if (Math.abs(pct) < 0.5) return { text: '→持平', cls: 'trend-same', arrow: '→', pct: 0 };
+    if (pct > 0) return { text: '↑' + Math.abs(pct).toFixed(2) + '%', cls: 'trend-up', arrow: '↑', pct: pct };
+    return { text: '↓' + Math.abs(pct).toFixed(2) + '%', cls: 'trend-down', arrow: '↓', pct: pct };
+}
+
+function getLightClass(rate) {
+    if (rate <= 10) return 'row-green';
+    if (rate <= 20) return 'row-yellow';
+    return 'row-red';
+}
+
+function getLightTag(rate) {
+    if (rate <= 10) return '<span class="tag tag-green">🟢 稳定</span>';
+    if (rate <= 20) return '<span class="tag tag-yellow">🟡 关注</span>';
+    return '<span class="tag tag-red">🔴 预警</span>';
+}
+
+// ==================== 8. UI渲染 ====================
+function renderKpiTable(weekData, allWeeks) {
+    // 取至多4周数据：当前周 + 前3周
+    var weeks = [];
+    for (var w = 0; w < 4; w++) {
+        var idx = currentWeekIndex + w;
+        weeks.push((idx < allWeeks.length && allWeeks[idx]) ? allWeeks[idx] : null);
+    }
+    // weeks[0]=选中周, weeks[1]=上周, weeks[2]=前周, weeks[3]=前三周
+
+    // 辅助：格式化环比（本周 vs 上周）
+    function deltaVal(cur, prev, unit) {
+        if (prev === null || prev === undefined) return '--';
+        var d = cur - prev;
+        if (unit === 'pp') return (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
+        if (unit === 'pct') return (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
+        return (d >= 0 ? '+' : '') + Math.round(d);
+    }
+
+    function deltaColor(cur, prev) {
+        if (prev === null || prev === undefined) return '#94a3b8';
+        return cur > prev ? '#27ae60' : (cur < prev ? '#c0392b' : '#94a3b8');
+    }
+
+    // 取每个指标4周的值
+    function vals(field) { return weeks.map(function(w) { return w ? w[field] : null; }); }
+
+    var rows = [
+        { label: '累计抽检台数', unit: 'int', field: 'totalSampling', format: function(v) { return v; }, threshold: null, invert: false },
+        { label: '有效抽检天数', unit: 'int', field: 'activeDays', format: function(v) { return v; }, threshold: null, invert: false },
+        { label: '抽检日均人效', unit: 'int', field: 'dailyAvgEfficiency', format: function(v) { return v; }, threshold: null, invert: false },
+        { label: '站点总判责量', unit: 'int', field: 'judgmentCount', format: function(v) { return v; }, threshold: null, invert: false },
+        { label: '实际抽检占比(15%)', unit: 'pct', field: 'coverage', format: function(v) { return v.toFixed(2) + '%'; }, threshold: 15, invert: false },
+        { label: '抽检失误数', unit: 'int', field: 'cjErrors', format: function(v) { return v; }, threshold: null, invert: true },
+        { label: '抽检准确率(99%)', unit: 'pp', field: 'accuracy', format: function(v) { return v.toFixed(2) + '%'; }, threshold: 99, invert: false },
+        { label: '品控失误数', unit: 'int', field: 'totalErrors', format: function(v) { return v; }, threshold: null, invert: true },
+        { label: '判责准确率(99.5%)', unit: 'pp', field: 'panZeAccuracy', format: function(v) { return v.toFixed(2) + '%'; }, threshold: 99.5, invert: false }
+    ];
+
+    var colCount = weeks.length + 3; // 指标 + 环比 + N周 + 趋势
+    var colWidth = (100 / colCount).toFixed(1) + '%';
+    var html = '<div class="table-wrap"><table class="data-table" style="font-size:0.8rem;table-layout:fixed;">';
+    // 表头
+    html += '<thead><tr><th style="width:' + colWidth + ';">指标</th><th style="width:' + colWidth + ';">环比</th>';
+    weeks.forEach(function(w, i) {
+        var label = w ? getWeekLabel(w.monday) : '--';
+        var dateRange = w ? formatShortDate(w.monday) + '~' + formatShortDate(w.sunday) : '';
+        var cellContent = (i === 0 ? '📌 ' : '') + label + '<br><span style="font-weight:400;font-size:0.7rem;color:#5e6f8d;">' + dateRange + '</span>';
+        html += '<th style="width:' + colWidth + ';">' + cellContent + '</th>';
+    });
+    html += '<th style="width:' + colWidth + ';">趋势</th></tr></thead><tbody>';
+
+    // 数据行
+    rows.forEach(function(row) {
+        var data = vals(row.field);
+        var cur = data[0], prev = data[1];
+        var dVal = (cur !== null && prev !== null) ? deltaVal(cur, prev, row.unit) : '--';
+        var dColor = (cur !== null && prev !== null) ? (row.invert ? deltaColor(prev, cur) : deltaColor(cur, prev)) : '#94a3b8';
+
+        // 迷你趋势图（从旧到新排列）
+        var sparkVals = data.slice().reverse(); // 反转：旧→新
+        var sparkSVG = buildSparkline(sparkVals, 80, 26);
+
+        html += '<tr>';
+        html += '<td style="font-weight:600;">' + row.label + '</td>';
+        html += '<td style="color:' + dColor + ';font-weight:600;font-size:0.78rem;">' + dVal + '</td>';
+        data.forEach(function(v, i) {
+            var colorStyle = '';
+            if (row.threshold !== null && v !== null && v < row.threshold) {
+                colorStyle = 'color:#c0392b;';
+            }
+            html += '<td style="font-weight:' + (i === 0 ? '700' : '400') + ';' + colorStyle + '">' + (v !== null ? row.format(v) : '--') + '</td>';
+        });
+        html += '<td>' + (sparkSVG || '<span class="text-muted">--</span>') + '</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    document.getElementById('kpiRow').innerHTML = html;
+    document.getElementById('kpiRow').style.display = '';
+}
+
+function showKpiTrendPopup(type) {
+    var allWeeks = window._allWeeksCache || [];
+    if (allWeeks.length < 2) return;
+
+    var titles = { sampling: '📦 抽检量', judgment: '⚖️ 判责量', coverage: '📐 抽检覆盖率', accuracy: '🎯 抽检准确率' };
+    var title = titles[type] || type;
+
+    // 以选中周为基准，收集至多4周数据（从旧到新排列，选中周在最右）
+    var sel = currentWeekIndex;
+    var popWeeks = [];
+    for (var pw = Math.min(sel + 3, allWeeks.length - 1); pw >= sel; pw--) {
+        if (pw < allWeeks.length && allWeeks[pw]) popWeeks.push(allWeeks[pw]);
+    }
+    // 已按从旧到新排列（高索引=旧周先push），选中周在最后
+
+    var selLabel = allWeeks[sel] ? getWeekLabel(allWeeks[sel].monday) : '';
+
+    // 收集4周卡片（从旧到新显示，选中周在最后=高亮）
+    var weekCards = '';
+    for (var wc = 0; wc < popWeeks.length; wc++) {
+        var wd = popWeeks[wc];
+        if (!wd) continue;
+        var val, sub;
+        switch (type) {
+            case 'sampling':
+                val = wd.totalSampling;
+                sub = '线上:' + wd.onlineCount + '<br>实物:' + wd.physicalCount;
+                break;
+            case 'judgment':
+                val = wd.judgmentCount;
+                sub = '判责总量';
+                break;
+            case 'coverage':
+                var covVal = wd.judgmentCount > 0 ? (wd.totalSampling / wd.judgmentCount * 100) : 0;
+                val = covVal.toFixed(2) + '%';
+                sub = '抽检' + wd.totalSampling + '/判责' + wd.judgmentCount;
+                break;
+            case 'accuracy':
+                val = wd.accuracy.toFixed(2) + '%';
+                sub = '失误:' + wd.cjErrors + '单<br>抽检:' + wd.totalSampling + '单';
+                break;
+        }
+        var label = getWeekLabel(wd.monday);
+        var isSel = (wc === popWeeks.length - 1);
+        weekCards += '<div style="background:' + (isSel ? '#f1f5f9' : '#fafcfd') + ';border:1px solid ' + (isSel ? '#2a5298' : '#eef2f6') + ';padding:14px 16px;border-radius:0;">' +
+            '<div style="font-size:0.75rem;color:#5e6f8d;margin-bottom:4px;">' + (isSel ? '📌 ' : '📅 ') + label + '</div>' +
+            '<div style="font-size:1.4rem;font-weight:700;color:#1f3a6b;">' + val + '</div>' +
+            '<div style="font-size:0.72rem;color:#94a3b8;">' + sub + '</div>' +
+            '</div>';
+    }
+
+    // 补齐到4列（不足4周时用占位卡）
+    var cardCount = (weekCards.match(/<\/div>/g) || []).length;
+    while (cardCount < 12) {
+        weekCards += '<div style="background:#fafcfd;border:1px dashed #eef2f6;padding:14px 16px;border-radius:0;display:flex;align-items:center;justify-content:center;"><span class="text-muted" style="font-size:0.75rem;">无数据</span></div>';
+        cardCount += 3;
+    }
+
+    // 收集趋势数据（从旧到新，用于折线图）
+    var labels = [], values = [], weekLabels = [];
+    for (var wv = 0; wv < popWeeks.length; wv++) {
+        var wd2 = popWeeks[wv];
+        if (!wd2) continue;
+        weekLabels.push(getWeekLabel(wd2.monday));
+        var v2;
+        switch (type) {
+            case 'sampling': v2 = wd2.totalSampling; break;
+            case 'judgment': v2 = wd2.judgmentCount; break;
+            case 'coverage': v2 = wd2.judgmentCount > 0 ? (wd2.totalSampling / wd2.judgmentCount * 100) : 0; break;
+            case 'accuracy': v2 = wd2.accuracy; break;
+        }
+        labels.push((type === 'coverage' || type === 'accuracy') ? v2.toFixed(2) + '%' : String(v2));
+        values.push(v2);
+    }
+
+    // 构建带标签的SVG趋势图
+    var chartW = 500, chartH = 140, padL = 50, padR = 20, padT = 24, padB = 34;
+    var plotW = chartW - padL - padR, plotH = chartH - padT - padB;
+    var validVals = values.filter(function(v3) { return v3 !== null && v3 !== undefined; });
+    var minV = validVals.length > 0 ? Math.min.apply(null, validVals) : 0;
+    var maxV = validVals.length > 0 ? Math.max.apply(null, validVals) : 1;
+    var range = maxV - minV || 1;
+    var n = values.length;
+
+    var points = [], svgCircles = '', svgLabels = '', svgXLabels = '';
+    for (var pi = 0; pi < n; pi++) {
+        if (values[pi] === null || values[pi] === undefined) continue;
+        var cx = padL + (n > 1 ? (pi / (n - 1)) * plotW : plotW / 2);
+        var cy = padT + (1 - (values[pi] - minV) / range) * plotH;
+        points.push(cx.toFixed(1) + ',' + cy.toFixed(1));
+        var isLast = (pi === n - 1);
+        svgCircles += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + (isLast ? '5' : '4') + '" fill="' + (isLast ? '#1f3a6b' : '#2a5298') + '" stroke="white" stroke-width="2"/>';
+        svgLabels += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 10).toFixed(1) + '" text-anchor="middle" font-size="11" fill="#1f3a6b" font-weight="600">' + labels[pi] + '</text>';
+        svgXLabels += '<text x="' + cx.toFixed(1) + '" y="' + (chartH - 6).toFixed(0) + '" text-anchor="middle" font-size="10" fill="#5e6f8d">' + weekLabels[pi] + '</text>';
+    }
+
+    var trendSVG2 = points.length >= 2 ?
+        '<svg viewBox="0 0 ' + chartW + ' ' + chartH + '" style="display:block;width:100%;max-width:500px;height:auto;margin:0 auto;">' +
+            '<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + plotH) + '" stroke="#eef2f6" stroke-width="1"/>' +
+            '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (padL + plotW) + '" y2="' + (padT + plotH) + '" stroke="#eef2f6" stroke-width="1"/>' +
+            '<polyline points="' + points.join(' ') + '" fill="none" stroke="#2a5298" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            svgCircles + svgLabels + svgXLabels +
+        '</svg>' : '';
+
+    var trendIconBig = getTrendIcon(values);
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = '<div class="modal-container" style="max-width:620px;">' +
+        '<div class="modal-header">' + title + ' 趋势（📌 ' + selLabel + '）<button class="modal-close-btn" id="kpiClose">✕</button></div>' +
+        '<div class="modal-body">' +
+            '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">' + weekCards + '</div>' +
+            '<div style="text-align:center;padding:10px 0;">' +
+                '<div style="font-weight:600;margin-bottom:6px;color:#1f3a6b;">📈 近4周趋势（折线右端 = 选中周）</div>' +
+                (trendSVG2 || '<span class="text-muted">数据不足</span>') +
+                '<div style="margin-top:4px;font-size:1.3rem;">' + trendIconBig + '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#kpiClose').onclick = function() { overlay.remove(); };
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+}
+
+function sortPersonStats(stats, col, asc) {
+    return stats.slice().sort(function(a, b) {
+        var va, vb;
+        switch (col) {
+            case 'name': va = a.name; vb = b.name; break;
+            case 'sampling': va = a.sampling; vb = b.sampling; break;
+            case 'panZe': va = a.panZe; vb = b.panZe; break;
+            case 'coverage': va = a.coverage; vb = b.coverage; break;
+            case 'errors': va = a.errors; vb = b.errors; break;
+            case 'accuracy': va = a.accuracy; vb = b.accuracy; break;
+            case 'rate':
+            default: va = a.rate; vb = b.rate; break;
+        }
+        if (typeof va === 'string') return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return asc ? va - vb : vb - va;
+    });
+}
+
+function buildSparkline(values, width, height) {
+    // values: [v0, v1, v2, v3] 从最早到最新（v3=当前周）
+    if (!values || values.length < 2) return '';
+    var valid = values.filter(function(v) { return v !== null && v !== undefined && isFinite(v); });
+    if (valid.length < 2) return '';
+    var min = Math.min.apply(null, valid); var max = Math.max.apply(null, valid);
+    var range = max - min || 1;
+    var pad = 2;
+    var w = width - pad * 2; var h = height - pad * 2;
+    // 反转：SVG y=0在顶部，准确率越高y越小
+    var points = values.map(function(v, idx) {
+        if (v === null || v === undefined || !isFinite(v)) return null;
+        var x = pad + (idx / (values.length - 1)) * w;
+        var y = pad + (1 - (v - min) / range) * h;
+        return x.toFixed(1) + ',' + y.toFixed(1);
+    }).filter(function(p) { return p !== null; });
+    if (points.length < 2) return '';
+    var polyline = '<polyline points="' + points.join(' ') + '" fill="none" stroke="#2a5298" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    var dots = '';
+    points.forEach(function(p) {
+        var xy = p.split(',');
+        dots += '<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="2" fill="#2a5298"/>';
+    });
+    return '<svg width="' + width + '" height="' + height + '" style="vertical-align:middle;">' + polyline + dots + '</svg>';
+}
+
+function getTrendIcon(accHistory) {
+    // accHistory: [w0, w1, w2, w3] w0=最远, w3=当前
+    if (!accHistory || accHistory.length < 2) return '<span class="text-muted">--</span>';
+    var valid = accHistory.filter(function(v) { return v !== null; });
+    if (valid.length < 2) return '<span class="text-muted">--</span>';
+    // 直接对比最近两周：当前 vs 上周
+    var current = valid[valid.length - 1];
+    var previous = valid[valid.length - 2];
+    var delta = current - previous;
+    if (Math.abs(delta) < 0.01) return '<span style="color:#2980b9;font-size:1.1rem;">→</span>';
+    if (delta > 0) return '<span style="color:#27ae60;font-size:1.1rem;">↑</span>';
+    return '<span style="color:#c0392b;font-size:1.1rem;">↓</span>';
+}
+
+function renderPersonTable(weekData, allWeeks) {
+    // 缓存全部周数据供弹窗使用
+    window._allWeeksCache = allWeeks;
+
+    var stats = sortPersonStats(weekData.personStats, personSortCol, personSortAsc);
+
+    // 构建每人最近4周准确率历史（索引0=最远, 索引N-1=当前周，没数据的周填null占位）
+    var accHistoryMap = {};
+    var maxWeeks = Math.min(allWeeks.length, 4);
+    stats.forEach(function(p) { accHistoryMap[p.name] = new Array(maxWeeks).fill(100); });
+    for (var wi = maxWeeks - 1; wi >= 0; wi--) {
+        var wd = allWeeks[wi];
+        if (!wd || !wd.personStats) continue;
+        var idx = maxWeeks - 1 - wi; // 当前周=最后一个位置
+        wd.personStats.forEach(function(ps) {
+            if (accHistoryMap[ps.name] !== undefined) {
+                accHistoryMap[ps.name][idx] = ps.accuracy;
+            }
+        });
+    }
+
+    var tbody = '';
+
+    // === 总计行（置于表格顶部）===
+    var totalSamplingAll = 0, totalPanZeAll = 0, totalErrorsAll = 0;
+    stats.forEach(function(p) { totalSamplingAll += p.sampling; totalPanZeAll += (p.panZe || 0); totalErrorsAll += p.errors; });
+    var totalCoverageAll = totalPanZeAll > 0 ? (totalSamplingAll / totalPanZeAll * 100) : 0;
+    var totalAccuracyAll = totalSamplingAll > 0 ? ((totalSamplingAll - totalErrorsAll) / totalSamplingAll * 100) : 100;
+
+    // 计算总计的跨周趋势
+    var totalAccHistory = [];
+    for (var tw = Math.min(allWeeks.length, 4) - 1; tw >= 0; tw--) {
+        var twd = allWeeks[tw];
+        if (!twd || !twd.personStats) continue;
+        var twSampling = 0, twErrors = 0;
+        twd.personStats.forEach(function(ps) { twSampling += ps.sampling; twErrors += ps.errors; });
+        totalAccHistory.push(twSampling > 0 ? ((twSampling - twErrors) / twSampling * 100) : 100);
+    }
+    var totalSpark = buildSparkline(totalAccHistory, 88, 22);
+    var totalTrendIcon = getTrendIcon(totalAccHistory);
+
+    var totalAccColor = totalAccuracyAll >= 99.95 ? "#27ae60" : (totalAccuracyAll <= 99 ? "#c0392b" : "#f39c12");
+
+    tbody += "<tr style=\"background:#f1f5f9;font-weight:700;border-bottom:3px solid #2a5298;cursor:pointer;\" onclick=\"showTotalTrendPopup()\" title=\"点击查看整体趋势\">" +
+        "<td style=\"text-align:center;\">📊</td>" +
+        "<td class=\"col-name\" style=\"font-weight:700;\">总计 <span style=\"font-weight:400;color:#5e6f8d;\">(" + stats.length + "人)</span></td>" +
+        "<td style=\"text-align:center;\">--</td>" +
+        "<td class=\"col-num\">" + totalSamplingAll + "</td>" +
+        "<td class=\"col-num\">" + totalPanZeAll + "</td>" +
+        "<td class=\"col-num\">" + (totalPanZeAll > 0 ? totalCoverageAll.toFixed(2) + "%" : "--") + "</td>" +
+        "<td class=\"col-num\">" + totalErrorsAll + "</td>" +
+        "<td class=\"col-num fw-600\" style=\"color:" + totalAccColor + "\">" + totalAccuracyAll.toFixed(2) + "%</td>" +
+        "<td class=\"col-num\">" + (totalSpark || "<span class=\"text-muted\">--</span>") + "</td>" +
+        "<td class=\"text-center\">" + totalTrendIcon + "</td>" +
+        "</tr>";
+
+    stats.forEach(function(p, i) {
+        var accHistory = accHistoryMap[p.name] || [];
+        var sparklineHTML = buildSparkline(accHistory, 88, 22);
+        var trendIcon = getTrendIcon(accHistory);
+
+        var siteClass = '';
+        if (p.site === '深圳') siteClass = 'sz';
+        else if (p.site === '青岛') siteClass = 'qd';
+        else if (p.site === '成都') siteClass = 'cd';
+
+        // 准确率颜色：≤99%红色, 99.1-99.99%渐变, 100%绿色
+        var accColor, lightTag;
+        if (p.accuracy >= 99.95) {
+            accColor = '#27ae60'; lightTag = '<span class="tag tag-green">🟢</span>';
+        } else if (p.accuracy <= 99) {
+            accColor = '#c0392b'; lightTag = '<span class="tag tag-red">🔴</span>';
+        } else {
+            var hue = (p.accuracy - 99) / 1 * 120; // 99%→红(h=0), 100%→绿(h=120)
+            accColor = 'hsl(' + hue.toFixed(0) + ', 60%, 45%)';
+            lightTag = '<span class="tag tag-yellow">🟡</span>';
+        }
+        var lightClass = p.accuracy >= 99.95 ? 'row-green' : (p.accuracy <= 99 ? 'row-red' : 'row-yellow');
+
+        tbody += '<tr class="' + lightClass + '">' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td class="col-name"><span class="clickable" onclick="showPersonDetail(\'' + p.name.replace(/'/g, "\\'") + '\')">' + p.name + '</span></td>' +
+            '<td>' + (p.site ? '<span class="site-tag ' + siteClass + '">' + p.site + '</span>' : '--') + '</td>' +
+            '<td class="col-num fw-600">' + p.sampling + '</td>' +
+            '<td class="col-num fw-600">' + (p.panZe || 0) + '</td>' +
+            '<td class="col-num">' + (p.panZe > 0 ? p.coverage.toFixed(2) + '%' : '--') + '</td>' +
+            '<td class="col-num">' + p.errors + '</td>' +
+            '<td class="col-num fw-600" style="color:' + accColor + '">' + p.accuracy.toFixed(2) + '% ' + lightTag + '</td>' +
+            '<td class="col-num">' + (sparklineHTML || '<span class="text-muted">--</span>') + '</td>' +
+            '<td class="text-center">' + trendIcon + '</td>' +
+            '</tr>';
+    });
+
+    document.getElementById('personTbody').innerHTML = tbody;
+    document.getElementById('personMeta').textContent = '共 ' + stats.length + ' 人 | 抽检覆盖 ' + weekData.sampledCount + ' 人 | 失误 ' + weekData.personStats.filter(function(p) { return p.errors > 0; }).length + ' 人 | 判责合计 ' + weekData.judgmentCount + ' 单';
+
+    // 更新排序箭头
+    document.querySelectorAll('#personTable .sortable .sort-arrow').forEach(function(el) { el.textContent = ''; });
+    var activeTh = document.querySelector('#personTable .sortable[data-sort="' + personSortCol + '"] .sort-arrow');
+    if (activeTh) activeTh.textContent = personSortAsc ? '▲' : '▼';
+}
+
+function renderErrorAnalysis(weekData, prevWeekData) {
+    var src = activeErrorTab;
+    var catStats = weekData.categoryStats[src] || [];
+    var prevCatMap = {};
+    if (prevWeekData && prevWeekData.categoryStats[src]) {
+        prevWeekData.categoryStats[src].forEach(function(c) { prevCatMap[c.name] = c.count; });
+    }
+
+    var totalErrors = weekData.errorsBySource ? weekData.errorsBySource[src] : (
+        src === '初审' ? weekData.csErrors : (src === '抽检' ? weekData.cjErrors : weekData.qaErrors)
+    );
+
+    var prevTotal = prevWeekData ? (
+        src === '初审' ? prevWeekData.csErrors : (src === '抽检' ? prevWeekData.cjErrors : prevWeekData.qaErrors)
+    ) : 0;
+
+    var totalTrend = prevWeekData ? computeTrend(totalErrors, prevTotal) : null;
+
+    // 汇总统计
+    var summaryHTML = '<div class="error-summary">' +
+        '<div class="es-title">📊 本周汇总</div>' +
+        '<div class="es-stat"><span>失误总数</span><span class="es-val">' + totalErrors + ' 条</span></div>' +
+        '<div class="es-stat"><span>失误类别数</span><span class="es-val">' + catStats.length + ' 个</span></div>' +
+        '<div class="es-stat"><span>涉及人员</span><span class="es-val">' + weekData.personStats.filter(function(p) { return src === '初审' ? p.errorsCS > 0 : (src === '抽检' ? p.errorsCJ > 0 : p.errorsQA > 0); }).length + ' 人</span></div>';
+    if (totalTrend) {
+        summaryHTML += '<div class="es-stat"><span>环比上周</span><span class="es-val ' + totalTrend.cls + '">' + totalTrend.text + '（上周: ' + prevTotal + '条）</span></div>';
+    }
+    summaryHTML += '</div>';
+
+    // Top 类别
+    var topHTML = '<div class="error-toplist"><div class="et-title">📈 Top 5 失误类别</div>';
+    if (catStats.length === 0) {
+        topHTML += '<div class="text-muted text-sm">本周无失误记录</div>';
+    } else {
+        var maxCount = catStats[0] ? catStats[0].count : 1;
+        catStats.slice(0, 5).forEach(function(c, i) {
+            var pct = totalErrors > 0 ? (c.count / totalErrors * 100).toFixed(2) : 0;
+            var barW = totalErrors > 0 ? (c.count / totalErrors * 100).toFixed(0) : 0;
+            var prevCount = prevCatMap[c.name] || 0;
+            var deltaStr = '';
+            if (prevWeekData) {
+                if (prevCount > 0 && c.count !== prevCount) {
+                    var d = c.count - prevCount;
+                    deltaStr = ' <span style="font-size:0.7rem;' + (d > 0 ? 'color:#c0392b' : 'color:#27ae60') + '">' + (d > 0 ? '↑' : '↓') + Math.abs(d) + '</span>';
+                } else if (prevCount === 0 && c.count > 0) {
+                    deltaStr = ' <span style="font-size:0.7rem;color:#c0392b;">新增</span>';
+                } else if (prevCount > 0 && c.count === prevCount) {
+                    deltaStr = ' <span style="font-size:0.7rem;color:#5e6f8d;">→持平</span>';
+                }
+            }
+            topHTML += '<div class="et-item">' +
+                '<span class="et-rank">' + (i + 1) + '</span>' +
+                '<span class="et-cat" title="' + c.name + '">' + c.name + '</span>' +
+                '<div class="et-bar-wrap"><div class="et-bar cat-' + i + '" style="width:' + barW + '%"></div></div>' +
+                '<span class="et-count">' + c.count + ' (' + pct + '%)</span>' +
+                '<span class="et-trend">' + deltaStr + '</span>' +
+                '</div>';
+        });
+    }
+    topHTML += '</div>';
+
+    // 失误明细表
+    var weekErrors = allErrors.filter(function(e) {
+        return e.source === src && isInWeek(e.date, weekData.monday, weekData.sunday) && siteMatch(e, currentSite);
+    });
+    var detailHTML = '<div style="margin-top:16px;"><div style="font-weight:600;margin-bottom:10px;color:var(--primary);">📋 ' + src + '失误明细</div>';
+    if (weekErrors.length === 0) {
+        detailHTML += '<div class="text-muted text-sm" style="padding:20px;text-align:center;">暂无失误记录</div>';
+    } else {
+        detailHTML += '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+            '<th>日期</th><th>站点</th><th>品类</th><th>失误类别</th><th>人员</th><th>备注</th><th>质检码</th>' +
+            '</tr></thead><tbody>';
+        // 分组优先级：低级/投诉(0) 最顶 → 明显失误/扣错项(1) → 其他(2)；组内按类别数量降序，同类内日期降序
+        function errPriority(cat) {
+            var c = cat || '';
+            if (c.indexOf('低级') >= 0 || c.indexOf('投诉') >= 0) return 0;
+            if (c.indexOf('明显失误') >= 0 || c.indexOf('扣错项') >= 0) return 1;
+            return 2;
+        }
+        var catCountMap = {};
+        var personCatCountMap = {};
+        weekErrors.forEach(function(e) {
+            catCountMap[e.category] = (catCountMap[e.category] || 0) + 1;
+            var pk = e.category + '|' + e.reviewer;
+            personCatCountMap[pk] = (personCatCountMap[pk] || 0) + 1;
+        });
+        weekErrors.sort(function(a, b) {
+            var gp = errPriority(a.category) - errPriority(b.category);
+            if (gp !== 0) return gp;
+            var cntCmp = (catCountMap[b.category] || 0) - (catCountMap[a.category] || 0);
+            if (cntCmp !== 0) return cntCmp;
+            // 同类内：同一失误人员聚合，该人在此类别失误数多的在前
+            var pCmp = (personCatCountMap[b.category + '|' + b.reviewer] || 0) - (personCatCountMap[a.category + '|' + a.reviewer] || 0);
+            if (pCmp !== 0) return pCmp;
+            var nameCmp = (a.reviewer || '').localeCompare(b.reviewer || '', 'zh');
+            if (nameCmp !== 0) return nameCmp;
+            return b.date - a.date;        // 同人内日期新的在前
+        });
+
+        weekErrors.forEach(function(e) {
+            var searchText = [e.dateStr || '', e.site || '', e.product || '', e.category || '', e.reviewer || '', e.note || '', e.qcCode || ''].join('|').toLowerCase();
+            var siteClass = '';
+            if (e.site === '深圳') siteClass = 'sz';
+            else if (e.site === '青岛') siteClass = 'qd';
+            else if (e.site === '成都') siteClass = 'cd';
+            var rowClass = '';
+            if (e.category.indexOf('低级') >= 0 || e.category.indexOf('投诉') >= 0) rowClass = ' class="row-err-low"';
+            else if (e.category.indexOf('明显失误') >= 0 || e.category.indexOf('扣错项') >= 0) rowClass = ' class="row-err-mid"';
+            detailHTML += '<tr' + rowClass + ' data-search="' + searchText + '">' +
+                '<td>' + formatShortDate(e.date) + '</td>' +
+                '<td>' + (e.site ? '<span class="site-tag ' + siteClass + '">' + e.site + '</span>' : '--') + '</td>' +
+                '<td>' + (e.product || '--') + '</td>' +
+                '<td>' + e.category + '</td>' +
+                '<td>' + e.reviewer + '</td>' +
+                '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (e.note || '') + '">' + (e.note || '--') + '</td>' +
+                '<td>' + (e.qcCode || '--') + '</td>' +
+                '</tr>';
+        });
+        detailHTML += '</tbody></table></div>';
+    }
+    // 问题点解析 + 改善方向（竖向排列）
+    var noteKey = 'qc_note_' + currentSite + '_' + src + '_' + formatDate(weekData.monday);
+    detailHTML += '<div style="margin-bottom:10px;">' +
+        '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">🔎 问题点解析</div>' +
+        '<textarea id="errorAnalysisNote" data-note-key="' + noteKey + '" placeholder="记录本周失误的问题点分析…" style="width:100%;height:72px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '<div><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">💡 改善方向</div>' +
+        '<textarea id="errorImproveNote" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:72px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+    '</div>';
+    detailHTML += '</div>';
+
+    document.getElementById('errorTabContent').innerHTML =
+        '<div class="error-analysis-grid">' + summaryHTML + topHTML + '</div>' + detailHTML;
+
+    // 恢复已保存的问题点解析和改善方向
+    var savedAnalysis = localStorage.getItem(noteKey + '_analysis');
+    var savedImprove = localStorage.getItem(noteKey + '_improve');
+    var taAnalysis = document.getElementById('errorAnalysisNote');
+    var taImprove = document.getElementById('errorImproveNote');
+    if (taAnalysis) {
+        if (savedAnalysis) taAnalysis.value = savedAnalysis;
+        taAnalysis.oninput = function() { localStorage.setItem(noteKey + '_analysis', this.value); };
+    }
+    if (taImprove) {
+        if (savedImprove) taImprove.value = savedImprove;
+        taImprove.oninput = function() { localStorage.setItem(noteKey + '_improve', this.value); };
+    }
+}
+
+
+// 截图功能
+
+// 更新失误Tab标签上的计数
+function updateErrorTabs(weekData) {
+    var cs = weekData.csErrors || 0;
+    var cj = weekData.cjErrors || 0;
+    var qa = weekData.qaErrors || 0;
+    var total = cs + cj + qa;
+    var pct = function(n) { return total > 0 ? (n / total * 100).toFixed(1) + "%" : "0%"; };
+    var tabs = document.querySelectorAll("#errorTabs .tab-btn");
+    tabs.forEach(function(btn) {
+        var tab = btn.dataset.tab;
+        var count = tab === "初审" ? cs : (tab === "抽检" ? cj : qa);
+        btn.innerHTML = tab + '失误 <span style="font-size:0.72rem;opacity:0.75;">(' + count + '条, ' + pct(count) + ')</span>';
+    });
+    var badge = document.getElementById("errorTotalBadge");
+    if (badge) badge.innerHTML = "📋 合计 <b>" + total + "</b> 条";
+}
+
+// 总计行趋势弹窗
+function showTotalTrendPopup() {
+    var allWeeks = window._allWeeksCache || [];
+    if (allWeeks.length < 2) return;
+    var sel = currentWeekIndex;
+    var selLabel = allWeeks[sel] ? getWeekLabel(allWeeks[sel].monday) : "";
+
+    // 收集近4周汇总数据（从旧到新）
+    var rows = "";
+    var popWeeks = [];
+    for (var pw = Math.min(sel + 3, allWeeks.length - 1); pw >= sel; pw--) {
+        if (pw < allWeeks.length && allWeeks[pw]) popWeeks.push(allWeeks[pw]);
+    }
+    // popWeeks 是从旧到新
+
+    popWeeks.forEach(function(wd, wi) {
+        var isSel = (wi === popWeeks.length - 1);
+        var tSampling = 0, tPanZe = 0, tErrors = 0;
+        if (wd && wd.personStats) {
+            wd.personStats.forEach(function(ps) { tSampling += ps.sampling; tPanZe += (ps.panZe || 0); tErrors += ps.errors; });
+        }
+        var tCov = tPanZe > 0 ? (tSampling / tPanZe * 100) : 0;
+        var tAcc = tSampling > 0 ? ((tSampling - tErrors) / tSampling * 100) : 100;
+        var label = getWeekLabel(wd.monday);
+        var bg = isSel ? "background:#f1f5f9;" : "";
+        rows += "<tr style=\"" + bg + "\">" +
+            "<td>" + (isSel ? "📌 " : "📅 ") + label + "</td>" +
+            "<td>" + tSampling + "</td>" +
+            "<td>" + tPanZe + "</td>" +
+            "<td>" + tCov.toFixed(2) + "%</td>" +
+            "<td>" + tErrors + "</td>" +
+            "<td style=\"font-weight:600;color:" + (tAcc >= 99.95 ? "#27ae60" : tAcc <= 99 ? "#c0392b" : "#f39c12") + "\">" + tAcc.toFixed(2) + "%</td>" +
+            "</tr>";
+    });
+
+    var siteLabel = currentSite === "all" ? "全部站点" : currentSite + "站点";
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = "<div class=\"modal-container\" style=\"max-width:680px;\">" +
+        "<div class=\"modal-header\">📊 整体趋势（" + siteLabel + " · 📌 " + selLabel + "）<button class=\"modal-close-btn\" id=\"totalClose\">✕</button></div>" +
+        "<div class=\"modal-body\">" +
+            "<div class=\"table-wrap\"><table class=\"data-table\"><thead><tr>" +
+                "<th>周期</th><th>抽检量</th><th>判责量</th><th>覆盖率</th><th>失误</th><th>准确率</th>" +
+            "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
+        "</div>" +
+    "</div>";
+    document.body.appendChild(overlay);
+    overlay.querySelector("#totalClose").onclick = function() { overlay.remove(); };
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+}
+function screenshotSection(elementId, label) {
+    var el = document.getElementById(elementId);
+    if (!el) { alert("未找到截图元素"); return; }
+    if (typeof html2canvas === "undefined") { alert("html2canvas 未加载，请刷新后重试"); return; }
+
+    // 截图前把 textarea 替换为 pre，保留换行
+    var swaps = [];
+    var textareas = el.querySelectorAll('textarea');
+    textareas.forEach(function(ta) {
+        var pre = document.createElement('pre');
+        pre.textContent = ta.value || ta.placeholder || '';
+        pre.style.cssText = 'width:100%;min-height:72px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;white-space:pre-wrap;word-wrap:break-word;margin:0;background:#fff;';
+        ta.parentNode.insertBefore(pre, ta);
+        ta.style.display = 'none';
+        swaps.push({ textarea: ta, pre: pre });
+    });
+
+    html2canvas(el, {
+        backgroundColor: "#f5f7fa",
+        scale: 2,
+        useCORS: true,
+        logging: false
+    }).then(function(canvas) {
+        // 恢复 textarea
+        swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
+        var link = document.createElement("a");
+        var now = new Date();
+        var ts = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0") + "_" + String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0");
+        link.download = label + "_" + ts + ".png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    }).catch(function(err) {
+        // 恢复 textarea
+        swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
+        console.error("截图失败:", err);
+        alert("截图失败: " + err.message);
+    });
+}
+
+// ==================== 7b. 周报文本自动生成 ====================
+function generateReportText(weekData, allWeeks) {
+    var prevWeekData = (currentWeekIndex + 1 < allWeeks.length) ? allWeeks[currentWeekIndex + 1] : null;
+    var lines = [];
+    lines.push('核心指标');
+
+    // 抽检量（括号内：选定站点、当前周期的全部抽检人按出现次数计数，即线上+实物表G列）
+    var personSamplingCount = {};
+    samplingData.online.concat(samplingData.physical).forEach(function(s) {
+        if (!isInWeek(s.date, weekData.monday, weekData.sunday)) return;
+        if (!siteMatch(s, currentSite)) return;
+        var nm = fixPanZeName(s.sampler);
+        if (!nm) return;
+        personSamplingCount[nm] = (personSamplingCount[nm] || 0) + 1;
+    });
+    var personList = Object.keys(personSamplingCount).map(function(n) { return { name: n, sampling: personSamplingCount[n] }; })
+        .sort(function(a, b) { return b.sampling - a.sampling; });
+    var topStr = personList.length > 0 ? '  （' + personList.map(function(p) { return p.name + '：' + p.sampling; }).join('  ') + '）' : '';
+    var samplingDiff = '';
+    if (prevWeekData) {
+        var ds = weekData.totalSampling - prevWeekData.totalSampling;
+        if (ds > 0) samplingDiff = ' 较上周上升' + ds + '台';
+        else if (ds < 0) samplingDiff = ' 较上周下降' + (-ds) + '台';
+        else samplingDiff = ' 与上周持平';
+    }
+    lines.push('1、抽检量：' + weekData.totalSampling + topStr + samplingDiff);
+    lines.push('  线上：' + weekData.onlineCount + '  实物：' + weekData.physicalCount);
+    lines.push('  抽检人效：' + weekData.totalSampling + '/7≈' + Math.round(weekData.totalSampling / 7));
+
+    // 判责量
+    var jzDiff = '';
+    if (prevWeekData) {
+        var dj = weekData.judgmentCount - prevWeekData.judgmentCount;
+        if (dj > 0) jzDiff = '，较上周上升' + dj + '台';
+        else if (dj < 0) jzDiff = '，较上周下降' + (-dj) + '台';
+        else jzDiff = '，与上周持平';
+    }
+    lines.push('2、判责量：' + weekData.judgmentCount + jzDiff);
+
+    // 抽检覆盖率
+    var covDiff = '';
+    if (prevWeekData) {
+        var dc = weekData.coverage - prevWeekData.coverage;
+        if (dc > 0) covDiff = '，较上周提升' + dc.toFixed(2) + '%';
+        else if (dc < 0) covDiff = '，较上周下降' + (-dc).toFixed(2) + '%';
+        else covDiff = '，与上周持平';
+    }
+    lines.push('3、抽检覆盖率：' + weekData.coverage.toFixed(2) + '%' + covDiff);
+
+    // 抽检准确率
+    var accDiff = '';
+    if (prevWeekData) {
+        var da = weekData.accuracy - prevWeekData.accuracy;
+        if (da > 0) accDiff = '，较上周提升' + da.toFixed(2) + '%';
+        else if (da < 0) accDiff = '，较上周下降' + (-da).toFixed(2) + '%';
+        else accDiff = '，与上周持平';
+    }
+    lines.push('4、抽检准确率：' + weekData.accuracy.toFixed(2) + '%' + accDiff);
+
+    // 前三周环比（只看本周vs上周的抽检量）
+    var trendTxt = '数据不足';
+    if (prevWeekData) {
+        var dt = weekData.totalSampling - prevWeekData.totalSampling;
+        if (dt < 0) trendTxt = '呈下降趋势';
+        else if (dt > 0) trendTxt = '呈上升趋势';
+        else trendTxt = '整体平稳';
+    }
+    lines.push('5、前三周环比：' + trendTxt);
+
+    return lines.join('\n');
+}
+
+function updateReportText(weekData, allWeeks) {
+    var ta = document.getElementById('reportText');
+    if (!ta) return;
+    ta.value = generateReportText(weekData, allWeeks);
+    document.getElementById('reportSection').style.display = '';
+}
+
+function copyReportText() {
+    var ta = document.getElementById('reportText');
+    var btn = document.getElementById('btnCopyReport');
+    if (!ta || !btn) return;
+    var done = function(ok) {
+        var old = btn.innerHTML;
+        btn.innerHTML = ok ? '✅ 已复制' : '❌ 复制失败';
+        setTimeout(function() { btn.innerHTML = old; }, 1500);
+    };
+    ta.focus();
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
+    if (ok) { done(true); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(function() { done(true); }, function() { done(false); });
+    } else {
+        done(false);
+    }
+}
+
+function renderAll(weekData, allWeeks) {
+    // 环比对比：选中周的上一周（而非总是本周的"上周"）
+    var prevWeekData = (currentWeekIndex + 1 < allWeeks.length) ? allWeeks[currentWeekIndex + 1] : null;
+    renderKpiTable(weekData, allWeeks);
+    updateReportText(weekData, allWeeks);
+    renderPersonTable(weekData, allWeeks);
+    renderErrorAnalysis(weekData, prevWeekData);
+    document.getElementById('personSection').style.display = '';
+    document.getElementById('errorSection').style.display = '';
+    var siteLabel = currentSite === 'all' ? '全部站点' : currentSite + '站点';
+    document.getElementById('headerInfo').textContent = siteLabel + ' | 数据更新于 ' + new Date().toLocaleString('zh-CN');
+}
+
+// ==================== 9. 交互 ====================
+function switchWeek(index) {
+    if (index < 0 || index >= weekOptions.length) return;
+    currentWeekIndex = index;
+    document.getElementById('weekSelect').value = index;
+    document.getElementById('btnPrevWeek').disabled = (index >= weekOptions.length - 1);
+    document.getElementById('btnNextWeek').disabled = (index <= 0);
+    refreshView();
+}
+
+function refreshView() {
+    if (!dataReady) return;
+    var weeks = computeAllWeeks(allErrors, samplingData, panZeRecords, weekOptions, currentSite);
+    var weekData = weeks[currentWeekIndex];
+    renderAll(weekData, weeks);
+    updateErrorTabs(weekData);
+    // 更新站点筛选按钮激活态
+    document.querySelectorAll('#siteFilter .site-filter-btn').forEach(function(btn) {
+        btn.classList.remove('active', 'sz-active', 'qd-active', 'cd-active');
+        if (btn.dataset.site === currentSite) {
+            btn.classList.add('active');
+            if (currentSite === '深圳') btn.classList.add('sz-active');
+            else if (currentSite === '青岛') btn.classList.add('qd-active');
+            else if (currentSite === '成都') btn.classList.add('cd-active');
+        }
+    });
+}
+
+function showPersonDetail(name) {
+    var weekWeeks = computeAllWeeks(allErrors, samplingData, panZeRecords, weekOptions, currentSite);
+    var weekData = weekWeeks[currentWeekIndex];
+    var person = null;
+    weekData.personStats.forEach(function(p) { if (p.name === name) person = p; });
+    if (!person) return;
+
+    var personErrors = allErrors.filter(function(e) {
+        return e.reviewer === name && isInWeek(e.date, weekData.monday, weekData.sunday) && siteMatch(e, currentSite);
+    });
+
+    var siteClass = '';
+    if (person.site === '深圳') siteClass = 'sz';
+    else if (person.site === '青岛') siteClass = 'qd';
+    else if (person.site === '成都') siteClass = 'cd';
+
+    var html = '<div class="modal-header">👤 ' + name + ' 抽检详情<button class="modal-close-btn" id="detailClose">✕</button></div>' +
+        '<div class="modal-body">' +
+        '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">站点</div><div style="font-size:1rem;font-weight:600;">' + (person.site ? '<span class="site-tag ' + siteClass + '">' + person.site + '</span>' : '--') + '</div></div>' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">抽检单数</div><div style="font-size:1rem;font-weight:600;">' + person.sampling + '</div></div>' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">判责量</div><div style="font-size:1rem;font-weight:600;">' + (person.panZe || 0) + '</div></div>' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">失误单数</div><div style="font-size:1rem;font-weight:600;">' + person.errors + '</div></div>' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">准确率</div><div style="font-size:1rem;font-weight:600;' + (person.accuracy >= 99.95 ? 'color:#27ae60' : person.accuracy <= 99.5 ? 'color:#c0392b' : 'color:#f39c12') + '" style="' + (person.accuracy >= 99.95 ? 'color:#27ae60' : person.accuracy <= 99 ? 'color:#c0392b' : 'color:hsl(' + ((person.accuracy - 99) / 1 * 120).toFixed(0) + ',60%,45%)') + '">' + person.accuracy.toFixed(2) + '%</div></div>' +
+        '</div>';
+
+    if (personErrors.length > 0) {
+        html += '<div style="font-weight:600;margin-bottom:8px;color:#1f3a6b;">📋 本周失误明细（' + personErrors.length + '条）</div>' +
+            '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+            '<th>日期</th><th>来源</th><th>类别</th><th>备注</th><th>质检码</th>' +
+            '</tr></thead><tbody>';
+        personErrors.forEach(function(e) {
+            var srcTag = e.source === '初审' ? 'cs' : (e.source === '抽检' ? 'cj' : 'qa');
+            html += '<tr>' +
+                '<td>' + formatShortDate(e.date) + '</td>' +
+                '<td><span class="source-tag ' + srcTag + '">' + e.source + '</span></td>' +
+                '<td>' + e.category + '</td>' +
+                '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (e.note || '') + '">' + (e.note || '--') + '</td>' +
+                '<td>' + (e.qcCode || '--') + '</td>' +
+                '</tr>';
+        });
+        html += '</tbody></table></div>';
+    } else {
+        html += '<div class="text-muted text-sm" style="text-align:center;padding:20px;">本周无失误记录 ✅</div>';
+    }
+
+    // 最近3周数据对比
+    var allWeeks = window._allWeeksCache || [];
+    var weekHistory = [];
+    for (var wi2 = 0; wi2 < Math.min(allWeeks.length, 4); wi2++) {
+        var wd2 = allWeeks[wi2];
+        if (!wd2 || !wd2.personStats) continue;
+        var wp = null;
+        wd2.personStats.forEach(function(ps) { if (ps.name === name) wp = ps; });
+        weekHistory.push({
+            label: getWeekLabel(wd2.monday),
+            sampling: wp ? wp.sampling : 0,
+            panZe: wp ? (wp.panZe || 0) : 0,
+            errors: wp ? wp.errors : 0,
+            accuracy: wp ? wp.accuracy : null,
+            coverage: wp ? (wp.panZe > 0 ? wp.coverage : 0) : 0
+        });
+    }
+    if (weekHistory.length > 1) {
+        html += '<div style="margin-top:16px;">' +
+            '<div style="font-weight:600;margin-bottom:10px;color:#1f3a6b;">📈 最近3周趋势</div>' +
+            '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+            '<th>周期</th><th>抽检量</th><th>判责量</th><th>失误</th><th>覆盖率</th><th>准确率</th>' +
+            '</tr></thead><tbody>';
+        weekHistory.forEach(function(wh) {
+            var ac = wh.accuracy !== null ? wh.accuracy.toFixed(2) + '%' : '--';
+            var acColor = wh.accuracy !== null ? (wh.accuracy >= 99.95 ? 'color:#27ae60' : wh.accuracy <= 99.5 ? 'color:#c0392b' : 'color:#f39c12') : '';
+            html += '<tr>' +
+                '<td style="font-weight:600;">' + wh.label + '</td>' +
+                '<td>' + wh.sampling + '</td>' +
+                '<td>' + wh.panZe + '</td>' +
+                '<td>' + wh.errors + '</td>' +
+                '<td>' + (wh.panZe > 0 ? wh.coverage.toFixed(2) + '%' : '--') + '</td>' +
+                '<td style="font-weight:600;' + acColor + '">' + ac + '</td>' +
+                '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+    }
+    html += '</div>';
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = '<div class="modal-container" style="max-width:750px;">' + html + '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#detailClose').onclick = function() { overlay.remove(); };
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+}
+
+function setupEventListeners() {
+    // 周切换
+    document.getElementById('btnPrevWeek').onclick = function() { switchWeek(currentWeekIndex + 1); };
+    document.getElementById('btnNextWeek').onclick = function() { switchWeek(currentWeekIndex - 1); };
+    document.getElementById('weekSelect').onchange = function() { switchWeek(parseInt(this.value)); };
+
+    // 站点筛选
+    document.querySelectorAll('#siteFilter .site-filter-btn').forEach(function(btn) {
+        btn.onclick = function() {
+            currentSite = this.dataset.site;
+            refreshView();
+        };
+    });
+
+    // 复制周报文本
+    document.getElementById('btnCopyReport').onclick = copyReportText;
+
+    // 刷新
+    document.getElementById('btnRefresh').onclick = async function() {
+        document.getElementById('loadingArea').style.display = '';
+        document.getElementById('personSection').style.display = 'none';
+        document.getElementById('errorSection').style.display = 'none';
+        await initData();
+    };
+
+    // 表格排序
+    document.querySelectorAll('#personTable .sortable').forEach(function(th) {
+        th.onclick = function() {
+            var col = this.dataset.sort;
+            if (personSortCol === col) {
+                personSortAsc = !personSortAsc;
+            } else {
+                personSortCol = col;
+                personSortAsc = (col === 'name');
+            }
+            refreshView();
+        };
+    });
+
+    // Tab切换
+    document.querySelectorAll('#errorTabs .tab-btn').forEach(function(btn) {
+        btn.onclick = function() {
+            document.querySelectorAll('#errorTabs .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            activeErrorTab = this.dataset.tab;
+            refreshView();
+        };
+    });
+
+    // visibilitychange 自动刷新
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && dataReady) {
+            initData(true);
+        }
+    });
+}
+
+// ==================== 10. 初始化 ====================
+async function initData(silent) {
+    if (!silent) {
+        document.getElementById('loadingArea').style.display = '';
+        document.getElementById('bannerArea').innerHTML = '';
+        document.getElementById('personSection').style.display = 'none';
+        document.getElementById('errorSection').style.display = 'none';
+    }
+
+    var token = await acquireToken();
+    if (!token) {
+        document.getElementById('loadingArea').style.display = 'none';
+        showAuthUI();
+        return;
+    }
+
+    try {
+        // 第一批：最近2周（行数减半），先渲染让界面尽快显示
+        var results1 = await fetchAllData(token, 'first2');
+        applyLoadedData(results1);
+
+        // 第二批：第3~5周，后台补充完成后自动刷新界面
+        if (!silent) {
+            document.getElementById('bannerArea').innerHTML =
+                '<div class="info-banner">⏳ 已加载最近两周，正在后台加载第3~5周…</div>';
+        }
+        try {
+            var results2 = await fetchAllData(token, 'rest2');
+            var merged = mergePhaseResults(results1, results2);
+            applyLoadedData(merged);
+        } catch(e) {
+            console.warn('[二批] 第3~5周加载失败，保持最近2周数据:', e.message);
+            if (!silent) {
+                document.getElementById('bannerArea').innerHTML = '';
+            }
+        }
+    } catch(e) {
+        document.getElementById('loadingArea').style.display = 'none';
+        document.getElementById('bannerArea').innerHTML =
+            '<div class="error-banner"><div><span class="error-title">❌ 数据加载异常</span> — ' + e.message + '</div><button class="btn btn-sm" onclick="initData()">🔄 重试</button></div>';
+    }
+}
+
+// 应用已拉取结果：解析、更新全局数据并渲染界面（首批/合并后各调一次）
+function applyLoadedData(results) {
+    var processed = processResults(results);
+
+    // 检查是否全部失败
+    var allFailed = results.every(function(r) { return !r.ok; });
+    if (allFailed && processed.errors.length === 0) {
+        document.getElementById('loadingArea').style.display = 'none';
+        document.getElementById('bannerArea').innerHTML =
+            '<div class="error-banner"><div><span class="error-title">⚠️ 数据加载失败</span> — 所有Sheet均无法读取，可能是授权过期</div><button class="btn btn-sm" onclick="initData()">🔄 重试</button></div>';
+        if (allErrors.length === 0) showAuthUI();
+        return;
+    }
+
+    allErrors = processed.errors;
+    samplingData = processed.sampling;
+    weekOptions = buildWeekOptions();
+    // 保持当前周选择，不强制跳回本周
+    if (currentWeekIndex >= weekOptions.length) currentWeekIndex = 0;
+    dataReady = true;
+
+    // 填充周选择器
+    var selectHTML = '';
+    weekOptions.forEach(function(opt, i) {
+        selectHTML += '<option value="' + i + '"' + (i === currentWeekIndex ? ' selected' : '') + '>' + (opt.isCurrent ? '📌 ' : '📅 ') + opt.label + '</option>';
+    });
+    document.getElementById('weekSelect').innerHTML = selectHTML;
+    document.getElementById('btnPrevWeek').disabled = (currentWeekIndex >= weekOptions.length - 1);
+    document.getElementById('btnNextWeek').disabled = (currentWeekIndex <= 0);
+
+    document.getElementById('loadingArea').style.display = 'none';
+    document.getElementById('bannerArea').innerHTML = '';
+
+    // 显示各Sheet加载状态
+    var statusParts = [];
+    FEISHU_CONFIG.sheets.forEach(function(sh) {
+        var s = processed.status[sh.name];
+        if (s && s.ok) statusParts.push(sh.source + ':' + s.count + '条 ✅');
+        else statusParts.push(sh.source + ':加载失败 ❌');
+    });
+    FEISHU_CONFIG.samplingSheets.forEach(function(sh) {
+        var s = processed.status[sh.name];
+        if (s && s.ok) statusParts.push(sh.name + ':' + s.count + '条 ✅');
+        else statusParts.push(sh.name + ':加载失败 ❌');
+    });
+    // Supabase判责量
+    var pzSupabaseStatus = processed.status['Supabase判责量'];
+    if (pzSupabaseStatus && pzSupabaseStatus.ok) statusParts.push('判责(Supabase):' + pzSupabaseStatus.count + '人 ✅');
+    else statusParts.push('判责(Supabase):加载失败 ⚠️');
+
+    refreshView();
+}
+
+// ==================== 11. 启动 ====================
+setupEventListeners();
+
+// 检查URL参数是否有授权码
+var urlParams = new URLSearchParams(window.location.search);
+var codeFromUrl = urlParams.get('code');
+if (codeFromUrl) {
+    document.getElementById('loadingArea').style.display = '';
+    exchangeCodeForToken(codeFromUrl).then(function(r) {
+        if (r.success) {
+            // 清除URL参数
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            initData();
+        } else {
+            document.getElementById('loadingArea').style.display = 'none';
+            document.getElementById('bannerArea').innerHTML =
+                '<div class="error-banner"><div><span class="error-title">❌ 授权激活失败</span> — ' + r.error + '</div></div>';
+            showAuthUI();
+        }
+    });
+} else {
+    initData();
+}
+</script>
+</body>
+</html>
