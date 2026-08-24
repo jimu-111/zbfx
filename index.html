@@ -243,7 +243,7 @@ tr.row-err-mid td { background: #fde8e8 !important; }
 
     <!-- 抽检明细 -->
     <div class="section" id="personSection" style="display:none;">
-        <div class="section-title">👥 抽检明细 <button class="btn btn-sm" onclick="screenshotSection('personSection','抽检明细')" title="截图抽检明细" style="margin-left:8px;">📸</button> <span class="section-meta" id="personMeta"></span></div>
+        <div class="section-title">👥 抽检明细+失误总览 <button class="btn btn-sm" onclick="screenshotSection('personSection','抽检明细+失误总览')" title="截图抽检明细+失误总览" style="margin-left:8px;">📸</button> <span class="section-meta" id="personMeta"></span></div>
         <div class="table-wrap">
             <table class="data-table" id="personTable" style="table-layout:fixed;">
                 <thead>
@@ -253,9 +253,10 @@ tr.row-err-mid td { background: #fde8e8 !important; }
                         <th style="width:10%;">站点</th>
                         <th class="sortable col-num" data-sort="sampling" style="width:10%;">抽检量 <span class="sort-arrow"></span></th>
                         <th class="sortable col-num" data-sort="panZe" style="width:10%;">判责量 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="coverage" style="width:10%;">覆盖率 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="errors" style="width:10%;">失误订单 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="accuracy" style="width:10%;">准确率 <span class="sort-arrow">▼</span></th>
+                        <th class="sortable col-num" data-sort="coverage" style="width:10%;">抽检覆盖率 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="errors" style="width:10%;">抽检失误 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="totalErrors" style="width:10%;">总失误 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="accuracy" style="width:10%;">判责准确率 <span class="sort-arrow">▼</span></th>
                         <th style="width:10%;">四周趋势</th>
                         <th style="width:10%;">变化</th>
                     </tr>
@@ -988,8 +989,9 @@ function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
         var e = personErrors[name] || { total: 0, 初审: 0, 抽检: 0, QA: 0 };
         var pz = personPanZeSupabase[name] || 0;
         var cjErrs = e['抽检'] || 0;  // 只算抽检失误
-        var acc = s.sampling > 0 ? ((s.sampling - cjErrs) / s.sampling * 100) : 100; // 准确率=抽检失误
-        var cov = pz > 0 ? Math.min(100, s.sampling / pz * 100) : 0;        // 覆盖率=抽检量/判责量
+        var totalErrs = cjErrs + (e['初审'] || 0) + (e['QA'] || 0);  // 抽检/初审/QA 总失误
+        var acc = pz > 0 ? Math.max(0, (pz - totalErrs) / pz * 100) : null; // 判责准确率=(判责量-总失误)/判责量，无判责量为null
+        var cov = pz > 0 ? Math.min(100, s.sampling / pz * 100) : 0;        // 抽检覆盖率=抽检量/判责量
         personStats.push({
             name: name,
             site: s.site || SITE_MAP[name] || '',
@@ -1001,6 +1003,7 @@ function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
             errorsCS: e['初审'],
             errorsCJ: e['抽检'],
             errorsQA: e['QA'],
+            totalErrors: totalErrs,  // 抽检/初审/QA 失误总数
             rate: s.sampling > 0 ? (cjErrs / s.sampling * 100) : 0,
             accuracy: acc,
             coverage: cov
@@ -1323,9 +1326,12 @@ function sortPersonStats(stats, col, asc) {
             case 'coverage': va = a.coverage; vb = b.coverage; break;
             case 'errors': va = a.errors; vb = b.errors; break;
             case 'accuracy': va = a.accuracy; vb = b.accuracy; break;
+            case 'totalErrors': va = a.totalErrors; vb = b.totalErrors; break;
             case 'rate':
             default: va = a.rate; vb = b.rate; break;
         }
+        if (va === null || va === undefined) return 1;   // null 永远排最后
+        if (vb === null || vb === undefined) return -1;
         if (typeof va === 'string') return asc ? va.localeCompare(vb) : vb.localeCompare(va);
         return asc ? va - vb : vb - va;
     });
@@ -1342,17 +1348,21 @@ function buildSparkline(values, width, height) {
     var w = width - pad * 2; var h = height - pad * 2;
     // 反转：SVG y=0在顶部，准确率越高y越小
     var points = values.map(function(v, idx) {
-        if (v === null || v === undefined || !isFinite(v)) return null;
         var x = pad + (idx / (values.length - 1)) * w;
+        if (v === null || v === undefined || !isFinite(v)) return { x: x, y: null };  // 缺数据周：保留x位置画空心点
         var y = pad + (1 - (v - min) / range) * h;
-        return x.toFixed(1) + ',' + y.toFixed(1);
-    }).filter(function(p) { return p !== null; });
-    if (points.length < 2) return '';
-    var polyline = '<polyline points="' + points.join(' ') + '" fill="none" stroke="#2a5298" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+        return { x: x, y: y };
+    });
+    var validPoints = points.filter(function(p) { return p.y !== null; });
+    if (validPoints.length < 2) return '';
+    var polyline = '<polyline points="' + validPoints.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ') + '" fill="none" stroke="#2a5298" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
     var dots = '';
     points.forEach(function(p) {
-        var xy = p.split(',');
-        dots += '<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="2" fill="#2a5298"/>';
+        if (p.y === null) {
+            dots += '<circle cx="' + p.x.toFixed(1) + '" cy="' + (h / 2).toFixed(1) + '" r="2" fill="none" stroke="#cbd5e1" stroke-width="1"/>';  // 灰色空心点=该周无数据
+        } else {
+            dots += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2" fill="#2a5298"/>';
+        }
     });
     return '<svg width="' + width + '" height="' + height + '" style="vertical-align:middle;">' + polyline + dots + '</svg>';
 }
@@ -1377,14 +1387,14 @@ function renderPersonTable(weekData, allWeeks) {
 
     var stats = sortPersonStats(weekData.personStats, personSortCol, personSortAsc);
 
-    // 构建每人最近4周准确率历史（索引0=最远, 索引N-1=当前周，没数据的周填null占位）
+    // 构建每人最近4周准确率历史（以选定周为基准：选定周+往前3周；索引0=最远, 索引N-1=选定周，没数据的周填null占位）
     var accHistoryMap = {};
-    var maxWeeks = Math.min(allWeeks.length, 4);
-    stats.forEach(function(p) { accHistoryMap[p.name] = new Array(maxWeeks).fill(100); });
+    var maxWeeks = Math.min(allWeeks.length - currentWeekIndex, 4);
+    stats.forEach(function(p) { accHistoryMap[p.name] = new Array(maxWeeks).fill(null); });
     for (var wi = maxWeeks - 1; wi >= 0; wi--) {
-        var wd = allWeeks[wi];
+        var wd = allWeeks[currentWeekIndex + wi];
         if (!wd || !wd.personStats) continue;
-        var idx = maxWeeks - 1 - wi; // 当前周=最后一个位置
+        var idx = maxWeeks - 1 - wi; // 选定周=最后一个位置
         wd.personStats.forEach(function(ps) {
             if (accHistoryMap[ps.name] !== undefined) {
                 accHistoryMap[ps.name][idx] = ps.accuracy;
@@ -1395,24 +1405,25 @@ function renderPersonTable(weekData, allWeeks) {
     var tbody = '';
 
     // === 总计行（置于表格顶部）===
-    var totalSamplingAll = 0, totalPanZeAll = 0, totalErrorsAll = 0;
-    stats.forEach(function(p) { totalSamplingAll += p.sampling; totalPanZeAll += (p.panZe || 0); totalErrorsAll += p.errors; });
+    var totalSamplingAll = 0, totalPanZeAll = 0, totalErrorsAll = 0, totalAllErrors = 0;
+    stats.forEach(function(p) { totalSamplingAll += p.sampling; totalPanZeAll += (p.panZe || 0); totalErrorsAll += p.errors; totalAllErrors += (p.totalErrors || 0); });
     var totalCoverageAll = totalPanZeAll > 0 ? (totalSamplingAll / totalPanZeAll * 100) : 0;
-    var totalAccuracyAll = totalSamplingAll > 0 ? ((totalSamplingAll - totalErrorsAll) / totalSamplingAll * 100) : 100;
+    var totalAccuracyAll = totalPanZeAll > 0 ? Math.max(0, (totalPanZeAll - totalAllErrors) / totalPanZeAll * 100) : null;
 
-    // 计算总计的跨周趋势
+    // 计算总计的跨周趋势（判责准确率口径，选定周+往前3周）
     var totalAccHistory = [];
-    for (var tw = Math.min(allWeeks.length, 4) - 1; tw >= 0; tw--) {
-        var twd = allWeeks[tw];
+    for (var tw = maxWeeks - 1; tw >= 0; tw--) {
+        var twd = allWeeks[currentWeekIndex + tw];
         if (!twd || !twd.personStats) continue;
-        var twSampling = 0, twErrors = 0;
-        twd.personStats.forEach(function(ps) { twSampling += ps.sampling; twErrors += ps.errors; });
-        totalAccHistory.push(twSampling > 0 ? ((twSampling - twErrors) / twSampling * 100) : 100);
+        var twPanZe = 0, twTotalErrors = 0;
+        twd.personStats.forEach(function(ps) { twPanZe += (ps.panZe || 0); twTotalErrors += (ps.totalErrors || 0); });
+        totalAccHistory.push(twPanZe > 0 ? Math.max(0, (twPanZe - twTotalErrors) / twPanZe * 100) : null);
     }
     var totalSpark = buildSparkline(totalAccHistory, 88, 22);
     var totalTrendIcon = getTrendIcon(totalAccHistory);
 
-    var totalAccColor = totalAccuracyAll >= 99.95 ? "#27ae60" : (totalAccuracyAll <= 99 ? "#c0392b" : "#f39c12");
+    var totalAccTxt = totalAccuracyAll === null ? "--" : totalAccuracyAll.toFixed(2) + "%";
+    var totalAccColor = totalAccuracyAll === null ? "#94a3b8" : (totalAccuracyAll >= 99.5 ? "#27ae60" : (totalAccuracyAll < 99 ? "#c0392b" : "#f39c12"));
 
     tbody += "<tr style=\"background:#f1f5f9;font-weight:700;border-bottom:3px solid #2a5298;cursor:pointer;\" onclick=\"showTotalTrendPopup()\" title=\"点击查看整体趋势\">" +
         "<td style=\"text-align:center;\">📊</td>" +
@@ -1422,7 +1433,8 @@ function renderPersonTable(weekData, allWeeks) {
         "<td class=\"col-num\">" + totalPanZeAll + "</td>" +
         "<td class=\"col-num\">" + (totalPanZeAll > 0 ? totalCoverageAll.toFixed(2) + "%" : "--") + "</td>" +
         "<td class=\"col-num\">" + totalErrorsAll + "</td>" +
-        "<td class=\"col-num fw-600\" style=\"color:" + totalAccColor + "\">" + totalAccuracyAll.toFixed(2) + "%</td>" +
+        "<td class=\"col-num fw-600\">" + totalAllErrors + "</td>" +
+        "<td class=\"col-num fw-600\" style=\"color:" + totalAccColor + "\">" + totalAccTxt + "</td>" +
         "<td class=\"col-num\">" + (totalSpark || "<span class=\"text-muted\">--</span>") + "</td>" +
         "<td class=\"text-center\">" + totalTrendIcon + "</td>" +
         "</tr>";
@@ -1437,18 +1449,18 @@ function renderPersonTable(weekData, allWeeks) {
         else if (p.site === '青岛') siteClass = 'qd';
         else if (p.site === '成都') siteClass = 'cd';
 
-        // 准确率颜色：≤99%红色, 99.1-99.99%渐变, 100%绿色
-        var accColor, lightTag;
-        if (p.accuracy >= 99.95) {
-            accColor = '#27ae60'; lightTag = '<span class="tag tag-green">🟢</span>';
-        } else if (p.accuracy <= 99) {
-            accColor = '#c0392b'; lightTag = '<span class="tag tag-red">🔴</span>';
+        // 判责准确率红绿黄灯：<99%红灯, 99.00-99.49%黄灯, ≥99.50%绿灯；无判责量→灰'--'
+        var accTxt, accColor, lightTag;
+        if (p.accuracy === null || p.accuracy === undefined) {
+            accTxt = '--'; accColor = '#94a3b8'; lightTag = '';
+        } else if (p.accuracy < 99) {
+            accTxt = p.accuracy.toFixed(2) + '%'; accColor = '#c0392b'; lightTag = '<span class="tag tag-red">🔴</span>';
+        } else if (p.accuracy < 99.5) {
+            accTxt = p.accuracy.toFixed(2) + '%'; accColor = '#f39c12'; lightTag = '<span class="tag tag-yellow">🟡</span>';
         } else {
-            var hue = (p.accuracy - 99) / 1 * 120; // 99%→红(h=0), 100%→绿(h=120)
-            accColor = 'hsl(' + hue.toFixed(0) + ', 60%, 45%)';
-            lightTag = '<span class="tag tag-yellow">🟡</span>';
+            accTxt = p.accuracy.toFixed(2) + '%'; accColor = '#27ae60'; lightTag = '<span class="tag tag-green">🟢</span>';
         }
-        var lightClass = p.accuracy >= 99.95 ? 'row-green' : (p.accuracy <= 99 ? 'row-red' : 'row-yellow');
+        var lightClass = (p.accuracy === null || p.accuracy === undefined) ? '' : (p.accuracy < 99 ? 'row-red' : (p.accuracy < 99.5 ? 'row-yellow' : 'row-green'));
 
         tbody += '<tr class="' + lightClass + '">' +
             '<td>' + (i + 1) + '</td>' +
@@ -1458,8 +1470,9 @@ function renderPersonTable(weekData, allWeeks) {
             '<td class="col-num fw-600">' + (p.panZe || 0) + '</td>' +
             '<td class="col-num">' + (p.panZe > 0 ? p.coverage.toFixed(2) + '%' : '--') + '</td>' +
             '<td class="col-num">' + p.errors + '</td>' +
-            '<td class="col-num fw-600" style="color:' + accColor + '">' + p.accuracy.toFixed(2) + '% ' + lightTag + '</td>' +
-            '<td class="col-num">' + (sparklineHTML || '<span class="text-muted">--</span>') + '</td>' +
+            '<td class="col-num fw-600">' + (p.totalErrors || 0) + '</td>' +
+            '<td class="col-num fw-600" style="color:' + accColor + '">' + accTxt + ' ' + lightTag + '</td>' +
+            '<td class="col-num" style="cursor:pointer;" onclick="showPersonDetail(\'' + p.name.replace(/'/g, "\\'") + '\')" title="点击查看' + p.name + '近几周趋势">' + (sparklineHTML || '<span class="text-muted">--</span>') + '</td>' +
             '<td class="text-center">' + trendIcon + '</td>' +
             '</tr>';
     });
@@ -1659,21 +1672,21 @@ function showTotalTrendPopup() {
 
     popWeeks.forEach(function(wd, wi) {
         var isSel = (wi === popWeeks.length - 1);
-        var tSampling = 0, tPanZe = 0, tErrors = 0;
+        var tSampling = 0, tPanZe = 0, tErrors = 0, tTotalErrs = 0;
         if (wd && wd.personStats) {
-            wd.personStats.forEach(function(ps) { tSampling += ps.sampling; tPanZe += (ps.panZe || 0); tErrors += ps.errors; });
+            wd.personStats.forEach(function(ps) { tSampling += ps.sampling; tPanZe += (ps.panZe || 0); tErrors += ps.errors; tTotalErrs += (ps.totalErrors || 0); });
         }
         var tCov = tPanZe > 0 ? (tSampling / tPanZe * 100) : 0;
-        var tAcc = tSampling > 0 ? ((tSampling - tErrors) / tSampling * 100) : 100;
+        var tAcc = tPanZe > 0 ? Math.max(0, (tPanZe - tTotalErrs) / tPanZe * 100) : null;
         var label = getWeekLabel(wd.monday);
         var bg = isSel ? "background:#f1f5f9;" : "";
         rows += "<tr style=\"" + bg + "\">" +
             "<td>" + (isSel ? "📌 " : "📅 ") + label + "</td>" +
             "<td>" + tSampling + "</td>" +
             "<td>" + tPanZe + "</td>" +
-            "<td>" + tCov.toFixed(2) + "%</td>" +
-            "<td>" + tErrors + "</td>" +
-            "<td style=\"font-weight:600;color:" + (tAcc >= 99.95 ? "#27ae60" : tAcc <= 99 ? "#c0392b" : "#f39c12") + "\">" + tAcc.toFixed(2) + "%</td>" +
+            "<td>" + (tPanZe > 0 ? tCov.toFixed(2) + "%" : "--") + "</td>" +
+            "<td>" + tTotalErrs + "</td>" +
+            "<td style=\"font-weight:600;color:" + (tAcc === null ? "#94a3b8" : (tAcc >= 99.5 ? "#27ae60" : tAcc < 99 ? "#c0392b" : "#f39c12")) + "\">" + (tAcc === null ? "--" : tAcc.toFixed(2) + "%") + "</td>" +
             "</tr>";
     });
 
@@ -1684,7 +1697,7 @@ function showTotalTrendPopup() {
         "<div class=\"modal-header\">📊 整体趋势（" + siteLabel + " · 📌 " + selLabel + "）<button class=\"modal-close-btn\" id=\"totalClose\">✕</button></div>" +
         "<div class=\"modal-body\">" +
             "<div class=\"table-wrap\"><table class=\"data-table\"><thead><tr>" +
-                "<th>周期</th><th>抽检量</th><th>判责量</th><th>覆盖率</th><th>失误</th><th>准确率</th>" +
+                "<th>周期</th><th>抽检量</th><th>判责量</th><th>覆盖率</th><th>总失误</th><th>判责准确率</th>" +
             "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
         "</div>" +
     "</div>";
@@ -1875,6 +1888,7 @@ function refreshView() {
 function showPersonDetail(name) {
     var weekWeeks = computeAllWeeks(allErrors, samplingData, panZeRecords, weekOptions, currentSite);
     var weekData = weekWeeks[currentWeekIndex];
+    if (!weekData || !weekData.personStats) return;  // 周数据缺失时静默返回，防止点击无弹窗
     var person = null;
     weekData.personStats.forEach(function(p) { if (p.name === name) person = p; });
     if (!person) return;
@@ -1894,8 +1908,8 @@ function showPersonDetail(name) {
             '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">站点</div><div style="font-size:1rem;font-weight:600;">' + (person.site ? '<span class="site-tag ' + siteClass + '">' + person.site + '</span>' : '--') + '</div></div>' +
             '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">抽检单数</div><div style="font-size:1rem;font-weight:600;">' + person.sampling + '</div></div>' +
             '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">判责量</div><div style="font-size:1rem;font-weight:600;">' + (person.panZe || 0) + '</div></div>' +
-            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">失误单数</div><div style="font-size:1rem;font-weight:600;">' + person.errors + '</div></div>' +
-            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">准确率</div><div style="font-size:1rem;font-weight:600;' + (person.accuracy >= 99.95 ? 'color:#27ae60' : person.accuracy <= 99.5 ? 'color:#c0392b' : 'color:#f39c12') + '" style="' + (person.accuracy >= 99.95 ? 'color:#27ae60' : person.accuracy <= 99 ? 'color:#c0392b' : 'color:hsl(' + ((person.accuracy - 99) / 1 * 120).toFixed(0) + ',60%,45%)') + '">' + person.accuracy.toFixed(2) + '%</div></div>' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">总失误</div><div style="font-size:1rem;font-weight:600;">' + (person.totalErrors || 0) + '</div></div>' +
+            '<div style="background:#f8fafc;padding:12px;text-align:center;"><div style="font-size:0.7rem;color:#5e6f8d;">判责准确率</div><div style="font-size:1rem;font-weight:600;color:' + (person.accuracy === null || person.accuracy === undefined ? '#94a3b8' : (person.accuracy >= 99.5 ? '#27ae60' : person.accuracy < 99 ? '#c0392b' : '#f39c12')) + '">' + (person.accuracy === null || person.accuracy === undefined ? '--' : person.accuracy.toFixed(2) + '%') + '</div></div>' +
         '</div>';
 
     if (personErrors.length > 0) {
@@ -1918,11 +1932,11 @@ function showPersonDetail(name) {
         html += '<div class="text-muted text-sm" style="text-align:center;padding:20px;">本周无失误记录 ✅</div>';
     }
 
-    // 最近3周数据对比
+    // 最近3周数据对比（以选定周为基准：选定周+往前3周）
     var allWeeks = window._allWeeksCache || [];
     var weekHistory = [];
-    for (var wi2 = 0; wi2 < Math.min(allWeeks.length, 4); wi2++) {
-        var wd2 = allWeeks[wi2];
+    for (var wi2 = 0; wi2 < Math.min(allWeeks.length - currentWeekIndex, 4); wi2++) {
+        var wd2 = allWeeks[currentWeekIndex + wi2];
         if (!wd2 || !wd2.personStats) continue;
         var wp = null;
         wd2.personStats.forEach(function(ps) { if (ps.name === name) wp = ps; });
@@ -1939,11 +1953,11 @@ function showPersonDetail(name) {
         html += '<div style="margin-top:16px;">' +
             '<div style="font-weight:600;margin-bottom:10px;color:#1f3a6b;">📈 最近3周趋势</div>' +
             '<div class="table-wrap"><table class="data-table"><thead><tr>' +
-            '<th>周期</th><th>抽检量</th><th>判责量</th><th>失误</th><th>覆盖率</th><th>准确率</th>' +
+            '<th>周期</th><th>抽检量</th><th>判责量</th><th>失误</th><th>覆盖率</th><th>判责准确率</th>' +
             '</tr></thead><tbody>';
         weekHistory.forEach(function(wh) {
             var ac = wh.accuracy !== null ? wh.accuracy.toFixed(2) + '%' : '--';
-            var acColor = wh.accuracy !== null ? (wh.accuracy >= 99.95 ? 'color:#27ae60' : wh.accuracy <= 99.5 ? 'color:#c0392b' : 'color:#f39c12') : '';
+            var acColor = wh.accuracy !== null ? (wh.accuracy >= 99.5 ? 'color:#27ae60' : wh.accuracy < 99 ? 'color:#c0392b' : 'color:#f39c12') : '';
             html += '<tr>' +
                 '<td style="font-weight:600;">' + wh.label + '</td>' +
                 '<td>' + wh.sampling + '</td>' +
@@ -2014,12 +2028,6 @@ function setupEventListeners() {
         };
     });
 
-    // visibilitychange 自动刷新
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden && dataReady) {
-            initData(true);
-        }
-    });
 }
 
 // ==================== 10. 初始化 ====================
