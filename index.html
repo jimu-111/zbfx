@@ -285,23 +285,24 @@ const FEISHU_CONFIG = {
     appSecret: '1uLKmOkzQpoac6Ixw3Qhsb6KR1gCrcTn',
     spreadsheetToken: 'EdI0sn3qkh7H6wtkhcpcxrTnnDf',
     sheets: [
-        // 失误表小：首批读表尾1500行（5周约250条，余量充足），读后按日期裁剪
-        { id: '4054dd', name: '初审失误登记', source: '初审', colDate: 0, colSite: 1, colQcCode: 3, colCategory: 6, colReviewer: 8, colNote: 9, colProduct: 5 },
-        { id: 'mEiT35', name: '抽检失误登记', source: '抽检', colDate: 0, colSite: 1, colQcCode: 3, colCategory: 10, colReviewer: 6, colNote: 11, colProduct: 5 },
-        { id: 'LIfICo', name: 'QA失误登记', source: 'QA', colDate: 0, colSite: 1, colQcCode: 2, colCategory: 4, colReviewer: 5, colNote: 6, colProduct: 3 }
+        // 按A列日期定位读5周区间；colEnd=所需最右列，列范围收窄减少传输量
+        { id: '4054dd', name: '初审失误登记', source: '初审', colDate: 0, colSite: 1, colQcCode: 3, colCategory: 6, colReviewer: 8, colNote: 9, colProduct: 5, colEnd: 'J' },
+        { id: 'mEiT35', name: '抽检失误登记', source: '抽检', colDate: 0, colSite: 1, colQcCode: 3, colCategory: 10, colReviewer: 6, colNote: 11, colProduct: 5, colEnd: 'L' },
+        { id: 'LIfICo', name: 'QA失误登记', source: 'QA', colDate: 0, colSite: 1, colQcCode: 2, colCategory: 4, colReviewer: 5, colNote: 6, colProduct: 3, colEnd: 'G' }
     ],
     samplingSheets: [
-        // firstRows: 首批读表尾行数（约2周+余量）；fullRows: 5周+余量，二批读[fullRows, firstRows]区间
+        // 按A列日期定位读取：首批读2周区间、二批补3~5周区间；firstRows/fullRows仅作定位失败时的兜底估算
+        // 只读A~G列（日期/站点/初审人/抽检人），比全表26列少70%传输量
         // 线上约300行/天、实物约750行/天：2周=4200/10500，5周=10500/26250
-        { id: 'HC6Mm6', name: '线上', type: 'online', token: 'D6FewOnrhiyLX7kuNFEcdHSZntx', firstRows: 7000, fullRows: 17000 },
-        { id: 'HIkyyf', name: '实物', type: 'physical', token: 'D6FewOnrhiyLX7kuNFEcdHSZntx', firstRows: 16000, fullRows: 38000 }
+        { id: 'HC6Mm6', name: '线上', type: 'online', token: 'D6FewOnrhiyLX7kuNFEcdHSZntx', firstRows: 7000, fullRows: 17000, colEnd: 'G' },
+        { id: 'HIkyyf', name: '实物', type: 'physical', token: 'D6FewOnrhiyLX7kuNFEcdHSZntx', firstRows: 16000, fullRows: 38000, colEnd: 'G' }
     ],
     // 判责量数据源（与优学堂后台一致：每人抽检/判责记录，动态月份tab）
     panZeSheetToken: 'OwB7sBdCRhl2pwtgZP4c8F2Hn8e',
     panZeSheetId: '8pTEgS'
 };
 
-const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都' };
+const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','陆鑫':'青岛','葛玉鹏':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都','刘锐':'成都' };
 
 const FEISHU_PROXY_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co/functions/v1/feishu-proxy';
 const FEISHU_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmeHduaXhsdmR4YXdveWxoZ3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMDEyNzIsImV4cCI6MjA5Nzc3NzI3Mn0.aPfO4Ry_LzoOColCVx64JQPF-BWga-_J2fX9hg-E4G8';
@@ -322,30 +323,13 @@ let currentSite = '成都';       // 当前站点筛选：默认成都
 let dataReady = false;
 
 // ==================== 2b. 名字修正（与优学堂后台 fixFeishuChouJianName 一致） ====================
-const PANZE_NAME_FIX = { '吴晖':'吴辉','樊昱舜':'樊景舜','樊慧舞':'樊景舜','李思林':'李忠林','姜钧琪':'麦钧淇' };
+const PANZE_NAME_FIX = { '吴晖':'吴辉','樊昱舜':'樊景舜','樊慧舞':'樊景舜','李思林':'李忠林','姜钧琪':'麦钧淇','麦钧琪':'麦钧淇','彭土观':'彭士观' };
 function fixPanZeName(name) {
     name = String(name || '').trim();
     if (!name) return name;
-    // 精确修正
+    // 仅精确修正：原始Excel里就是正名，不做模糊匹配（避免"刘锐"被误并到"刘超"）
     if (PANZE_NAME_FIX[name]) return PANZE_NAME_FIX[name];
-    // 在 SITE_MAP 中的所有有效名字
-    var validNames = Object.keys(SITE_MAP);
-    if (validNames.indexOf(name) >= 0) return name;
-    // 编辑距离≤1模糊匹配
-    var bestName = null, bestDist = 999;
-    for (var vi = 0; vi < validNames.length; vi++) {
-        var valid = validNames[vi];
-        var m = name.length, n = valid.length;
-        var dp = []; for (var di = 0; di <= m; di++) { dp[di] = [di]; }
-        for (var dj = 1; dj <= n; dj++) dp[0][dj] = dj;
-        for (var di2 = 1; di2 <= m; di2++) {
-            for (var dj2 = 1; dj2 <= n; dj2++) {
-                dp[di2][dj2] = Math.min(dp[di2-1][dj2]+1, dp[di2][dj2-1]+1, dp[di2-1][dj2-1]+(name[di2-1]===valid[dj2-1]?0:1));
-            }
-        }
-        if (dp[m][n] < bestDist) { bestDist = dp[m][n]; bestName = valid; }
-    }
-    return (bestDist <= 1 && bestName) ? bestName : name;
+    return name;
 }
 
 // ==================== 3. 飞书 API ====================
@@ -555,7 +539,6 @@ function getWeekLabel(monday) {
     var firstMon = new Date(y, startM, 27);
     while (firstMon.getDay() !== 1) firstMon.setDate(firstMon.getDate() + 1);
     var wn = Math.floor((monday - firstMon) / (7 * 86400000)) + 1;
-    if (wn > 4) wn = 4;
     return (logicM + 1) + '月第' + wn + '周';
 }
 
@@ -663,12 +646,54 @@ async function fetchPanZeSupabase(monday, sunday) {
 }
 
 var _sheetRowCounts = null; // 缓存sheets/query结果，两阶段加载共用
+var _columnACache = {};     // 缓存各sheet的A列（日期列）+最后有效行号，定位两阶段复用
+var _sheetLocCache = {};    // 首批抽检表定位结果缓存（二批复用首批起点，避免重叠读取）
+
+// 读取A列（日期列）并定位目标日期对应的起始行，返回 {startRow, endRow}（1-based）
+// bufferRows: 起点往前多读的兜底行数（约1天数据，应对日期乱序/格式差异，多余行由周过滤裁掉）
+// 定位失败（行数未知/A列读取失败）返回 null，调用方退化为表尾估算行数
+async function locateStartRow(spreadsheetToken, sheetId, token, targetDate, bufferRows) {
+    try {
+        var cache = _columnACache[sheetId];
+        if (!cache) {
+            var rc = _sheetRowCounts[sheetId] || 0;
+            if (!rc) return null;
+            // 分块读A列（飞书单请求单元格上限5万，行数超限时自动分块）
+            var colA = [];
+            for (var chunk = 1; chunk <= rc; chunk += 50000) {
+                var endChunk = Math.min(chunk + 49999, rc);
+                var part = await fetchFeishuSheet(spreadsheetToken, sheetId, token, 'A' + chunk + ':A' + endChunk);
+                colA = colA.concat(part);
+            }
+            var lastRow = 0; // 最后一个日期有效行（跳过表头和空行）
+            for (var i = 0; i < colA.length; i++) {
+                if (parseDateValue(colA[i] && colA[i][0])) lastRow = i + 1;
+            }
+            cache = { colA: colA, lastRow: lastRow };
+            _columnACache[sheetId] = cache;
+        }
+        // 本地线性扫描第一个日期>=target的行（毫秒级，无网络请求）
+        var found = cache.lastRow + 1;
+        for (var i = 0; i < cache.colA.length; i++) {
+            var d = parseDateValue(cache.colA[i] && cache.colA[i][0]);
+            if (d && d >= targetDate) { found = i + 1; break; }
+        }
+        var startRow = Math.max(2, found - bufferRows);
+        return { startRow: startRow, endRow: cache.lastRow };
+    } catch(e) {
+        console.warn('[定位] ' + sheetId + ' A列定位失败，退化为表尾估算:', e.message);
+        return null;
+    }
+}
 
 async function fetchAllData(token, phase) {
-    // phase: 'first2'=最近2周（第一批，先渲染）| 'rest2'=第3~5周（第二批，后台补充）
+    // phase: 'first2'=首批（失误表读5周区间，抽检表读2周区间，先渲染）| 'rest2'=二批（抽检表补3~5周区间）
     var isRest = (phase === 'rest2');
     var phaseLabel = isRest ? '[二批]' : '[首批]';
     var wkOpts = buildWeekOptions();
+    var targetFirst = wkOpts[1].monday; // 2周前周一：首批抽检表起点
+    var targetAll = wkOpts[4].monday;   // 5周前周一：完整5周区间起点
+    var BUFFER_ROWS = 500;              // 定位起点往前多读的兜底行数（约1天数据）
 
     // 先查所有sheet的行数（元数据，很快），两阶段共用缓存
     if (!_sheetRowCounts) {
@@ -709,9 +734,9 @@ async function fetchAllData(token, phase) {
     var tAll = Date.now();
     var results = [];
     // 飞书请求串行执行：同一文档的并发请求会被飞书限流互相拖慢（实测单请求1.4秒 vs 并发14秒）
-    // 行数估算 + 读后按日期过滤：读表尾固定行数（覆盖所需周数+余量），内存精确裁剪到日期范围
+    // 读取策略：读A列按日期定位5周/2周区间起点，只读该区间的数据，列范围收窄到所需列，大幅减少传输量
     try {
-        // 失误数据：表小，首批直接读表尾1500行（覆盖5周约250条，余量充足），二批跳过
+        // 失误数据：表小，首批直接按5周日期定位读一次，二批跳过
         for (var i = 0; i < FEISHU_CONFIG.sheets.length; i++) {
             var sh = FEISHU_CONFIG.sheets[i];
             var t0 = Date.now();
@@ -721,37 +746,59 @@ async function fetchAllData(token, phase) {
                     results.push({ ok: true, source: sh.source, name: sh.name, rows: [] });
                     continue;
                 }
-                var rc = sheetRowCounts[sh.id] || 0;
-                var est = Math.max(2, rc - 1499);
-                var rows = await fetchFeishuSheet(FEISHU_CONFIG.spreadsheetToken, sh.id, token, 'A' + est + ':Z' + rc);
-                console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 耗时 ' + (Date.now() - t0) + 'ms, 行数 ' + rows.length + ' (range:A' + est + ':Z' + rc + ')');
+                var loc = await locateStartRow(FEISHU_CONFIG.spreadsheetToken, sh.id, token, targetAll, BUFFER_ROWS);
+                var range;
+                if (loc) {
+                    range = 'A' + loc.startRow + ':' + sh.colEnd + loc.endRow;
+                } else {
+                    // 定位失败：退化为表尾1500行估算（覆盖5周约250条，余量充足）
+                    var rcF = sheetRowCounts[sh.id] || 0;
+                    range = 'A' + Math.max(2, rcF - 1499) + ':' + sh.colEnd + rcF;
+                }
+                var rows = await fetchFeishuSheet(FEISHU_CONFIG.spreadsheetToken, sh.id, token, range);
+                console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 耗时 ' + (Date.now() - t0) + 'ms, 行数 ' + rows.length + ' (range:' + range + ')');
                 results.push({ ok: true, source: sh.source, name: sh.name, rows: rows, colDate: sh.colDate, colSite: sh.colSite, colQcCode: sh.colQcCode, colCategory: sh.colCategory, colReviewer: sh.colReviewer, colNote: sh.colNote, colProduct: sh.colProduct });
             } catch(e) {
                 console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 失败 耗时 ' + (Date.now() - t0) + 'ms: ' + e.message);
                 results.push({ ok: false, source: sh.source, name: sh.name, error: e.message });
             }
         }
-        // 抽检数据源：首批读表尾firstRows行（约2周+余量），二批读[fullRows, firstRows]区间（第3~5周）
+        // 抽检数据源：首批按2周日期定位读表尾区间，二批读[5周起点, 2周起点)区间
         for (var j = 0; j < FEISHU_CONFIG.samplingSheets.length; j++) {
             var sh2 = FEISHU_CONFIG.samplingSheets[j];
             var t0b = Date.now();
             try {
-                var rc2 = sheetRowCounts[sh2.id] || 0;
-                var est2, upper2;
-                if (isRest) {
-                    est2 = Math.max(2, rc2 - sh2.fullRows + 1);
-                    upper2 = rc2 - sh2.firstRows;
-                } else {
-                    est2 = Math.max(2, rc2 - sh2.firstRows + 1);
-                    upper2 = rc2;
+                var range2 = null, rows2 = [];
+                var loc2 = await locateStartRow(sh2.token, sh2.id, token, isRest ? targetAll : targetFirst, BUFFER_ROWS);
+                if (loc2) {
+                    var start2 = loc2.startRow, end2 = loc2.endRow;
+                    if (isRest) {
+                        // 二批：上界=首批起点-1（复用首批定位结果，避免与首批重叠读取）
+                        var firstLoc = _sheetLocCache[sh2.id];
+                        if (firstLoc) end2 = Math.min(end2, firstLoc.startRow - 1);
+                    } else {
+                        _sheetLocCache[sh2.id] = loc2;
+                    }
+                    if (end2 >= start2) range2 = 'A' + start2 + ':' + sh2.colEnd + end2;
                 }
-                if (upper2 < est2) {
-                    console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 无需读取');
+                if (!range2 && loc2) {
+                    // 定位成功但区间为空（表数据不足2周/5周），无需读取
+                    console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 定位成功但区间为空，无需读取');
                     results.push({ ok: true, type: sh2.type, name: sh2.name, rows: [] });
                     continue;
                 }
-                var rows2 = await fetchFeishuSheet(sh2.token, sh2.id, token, 'A' + est2 + ':Z' + upper2);
-                console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 耗时 ' + (Date.now() - t0b) + 'ms, 行数 ' + rows2.length + ' (range:A' + est2 + ':Z' + upper2 + ')');
+                if (!range2) {
+                    // 定位失败：退化为表尾估算行数（原方案）
+                    var rc2 = sheetRowCounts[sh2.id] || 0;
+                    var est2 = Math.max(2, rc2 - (isRest ? sh2.fullRows : sh2.firstRows) + 1);
+                    var upper2 = isRest ? (rc2 - sh2.firstRows) : rc2;
+                    if (upper2 >= est2) range2 = 'A' + est2 + ':' + sh2.colEnd + upper2;
+                    if (!isRest && upper2 >= est2) _sheetLocCache[sh2.id] = { startRow: est2, endRow: rc2 };
+                }
+                if (range2) {
+                    rows2 = await fetchFeishuSheet(sh2.token, sh2.id, token, range2);
+                }
+                console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 耗时 ' + (Date.now() - t0b) + 'ms, 行数 ' + rows2.length + (range2 ? ' (range:' + range2 + ')' : ''));
                 results.push({ ok: true, type: sh2.type, name: sh2.name, rows: rows2 });
             } catch(e) {
                 console.log('[计时] ' + phaseLabel + ' 抽检表 ' + sh2.name + ' 失败 耗时 ' + (Date.now() - t0b) + 'ms: ' + e.message);
@@ -888,18 +935,24 @@ function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
     });
 
     // 按人聚合判责量（来自Supabase每日同步 feishu_panze_*，按周过滤）
+    // 名字先过fixPanZeName统一口径；站点归属SITE_MAP优先，其次用本周抽检记录中的站点兜底（新人员）
     var personPanZeSupabase = {};
+    var droppedPanZeNames = {}; // 无站点归属被丢弃的人（仅提示用）
     (panZeSupabaseDaily || []).forEach(function(daily) {
         if (isInWeek(daily.date, monday, sunday)) {
             var map = daily.map || {};
-            Object.keys(map).forEach(function(name) {
-                // 站点过滤：选具体站点时只保留该站点的人，无站点归属的人仅在"全部"中显示
-                if (siteFilter !== 'all') {
-                    var personSite = SITE_MAP[name] || '';
-                    if (personSite !== siteFilter) return;
+            Object.keys(map).forEach(function(rawName) {
+                var name = fixPanZeName(rawName);
+                if (!name) return;
+                var personSite = SITE_MAP[name] || '';
+                if (!personSite && personSampling[name]) personSite = personSampling[name].site || '';
+                // 站点过滤：选具体站点时只保留该站点的人；站点不同是正常过滤，完全无归属才记入提示
+                if (siteFilter !== 'all' && personSite !== siteFilter) {
+                    if (!personSite) droppedPanZeNames[name] = (droppedPanZeNames[name] || 0) + 1;
+                    return;
                 }
                 // map值 = {品类:数量}，每人当日判责量 = 各品类求和
-                var v = map[name];
+                var v = map[rawName];
                 var count = 0;
                 if (v && typeof v === 'object') {
                     Object.keys(v).forEach(function(k) { count += Number(v[k]) || 0; });
@@ -915,7 +968,7 @@ function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
     // 按人聚合失误量（按来源分）
     var personErrors = {};
     weekErrors.forEach(function(e) {
-        var name = e.reviewer || '未知';
+        var name = fixPanZeName(e.reviewer) || '未知';
         if (!personErrors[name]) personErrors[name] = { total: 0, 初审: 0, 抽检: 0, QA: 0 };
         personErrors[name].total++;
         if (e.source === '初审') personErrors[name]['初审']++;
@@ -1016,7 +1069,8 @@ function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
         personStats: personStats,
         categoryStats: categoryStats,
         personCount: allPeople,
-        sampledCount: sampledPeople
+        sampledCount: sampledPeople,
+        droppedPanZeNames: Object.keys(droppedPanZeNames)
     };
 }
 
@@ -1411,7 +1465,8 @@ function renderPersonTable(weekData, allWeeks) {
     });
 
     document.getElementById('personTbody').innerHTML = tbody;
-    document.getElementById('personMeta').textContent = '共 ' + stats.length + ' 人 | 抽检覆盖 ' + weekData.sampledCount + ' 人 | 失误 ' + weekData.personStats.filter(function(p) { return p.errors > 0; }).length + ' 人 | 判责合计 ' + weekData.judgmentCount + ' 单';
+    var droppedNames = weekData.droppedPanZeNames || [];
+    document.getElementById('personMeta').textContent = '共 ' + stats.length + ' 人 | 抽检覆盖 ' + weekData.sampledCount + ' 人 | 失误 ' + weekData.personStats.filter(function(p) { return p.errors > 0; }).length + ' 人 | 判责合计 ' + weekData.judgmentCount + ' 单' + (droppedNames.length > 0 ? ' | ⚠️ 无站点归属未计入判责: ' + droppedNames.join('、') : '');
 
     // 更新排序箭头
     document.querySelectorAll('#personTable .sortable .sort-arrow').forEach(function(el) { el.textContent = ''; });
