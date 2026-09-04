@@ -307,15 +307,16 @@ const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳
 
 const FEISHU_PROXY_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co/functions/v1/feishu-proxy';
 const FEISHU_CLOUDFLARE_PROXY_URL = 'https://feishu-proxy.xuhang1117.workers.dev'; // Cloudflare Worker 代理（2026-09-04）
+const FEISHU_PAGES_PROXY_URL = 'https://yxt-feishu.pages.dev'; // Cloudflare Pages 代理（workers.dev 被屏蔽时的免费线路，2026-09-04）
 const FEISHU_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmeHduaXhsdmR4YXdveWxoZ3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMDEyNzIsImV4cCI6MjA5Nzc3NzI3Mn0.aPfO4Ry_LzoOColCVx64JQPF-BWga-_J2fX9hg-E4G8';
 const SUPABASE_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co';
 const SUPABASE_KEY = FEISHU_SUPABASE_KEY;
 
-// 三层线路（2026-09-04 Supabase 配额耗尽）：Supabase云端 → Cloudflare免费代理 → 本地代理
-// 某线路失败后熔断 5 分钟跳过；Cloudflare 线路超时 5 秒快速跳过
+// 四层线路（2026-09-04 Supabase 配额耗尽）：Supabase云端 → Cloudflare Pages → Cloudflare Worker → 本地代理
+// 某线路失败后熔断 5 分钟跳过；workers.dev 线路超时 5 秒快速跳过
 let _proxyDownUntil = {};
 function getProxyUrlList() {
-    return [FEISHU_PROXY_URL, FEISHU_CLOUDFLARE_PROXY_URL, 'http://localhost:3456/feishu-proxy'];
+    return [FEISHU_PROXY_URL, FEISHU_PAGES_PROXY_URL, FEISHU_CLOUDFLARE_PROXY_URL, 'http://localhost:3456/feishu-proxy'];
 }
 async function fetchWithTimeout(url, options, timeoutMs) {
     var controller = new AbortController();
@@ -450,21 +451,24 @@ async function getCloudToken() {
             }
         }
     } catch(e) {}
-    // Cloudflare KV 兜底（Supabase 402 期间共享不中断）
-    try {
-        var cfResp = await fetchWithTimeout(FEISHU_CLOUDFLARE_PROXY_URL + '/token', {
-            headers: { 'x-yxt-secret': 'yxt-feishu-2026' }
-        }, 8000);
-        var cfData = await cfResp.json();
-        if (cfData && cfData.value) {
-            var cfStored = JSON.parse(cfData.value);
-            if (cfStored && cfStored.expiresAt > Date.now() + 60000) {
-                localStorage.setItem('feishu_token', cfData.value);
-                console.log('☁️ 从 Cloudflare 恢复了有效的 feishu_token');
-                return cfStored.access_token;
+    // Cloudflare KV 兜底（Supabase 402 期间共享不中断；Pages 线路优先，workers.dev 常被屏蔽）
+    var cfTargets = [FEISHU_PAGES_PROXY_URL, FEISHU_CLOUDFLARE_PROXY_URL];
+    for (var _ci = 0; _ci < cfTargets.length; _ci++) {
+        try {
+            var cfResp = await fetchWithTimeout(cfTargets[_ci] + '/token', {
+                headers: { 'x-yxt-secret': 'yxt-feishu-2026' }
+            }, 8000);
+            var cfData = await cfResp.json();
+            if (cfData && cfData.value) {
+                var cfStored = JSON.parse(cfData.value);
+                if (cfStored && cfStored.expiresAt > Date.now() + 60000) {
+                    localStorage.setItem('feishu_token', cfData.value);
+                    console.log('☁️ 从 Cloudflare 恢复了有效的 feishu_token');
+                    return cfStored.access_token;
+                }
             }
-        }
-    } catch(e) {}
+        } catch(e) {}
+    }
     return null;
 }
 
@@ -503,22 +507,25 @@ function saveToken(token, refreshToken, expiresIn) {
     syncTokenToCloudflare(tokenStr, 0);
 }
 
-// token 写入 Cloudflare KV（带重试：立即 + 30s + 2min + 5min）
+// token 写入 Cloudflare KV（Pages + Worker 双写，共用同一 KV 命名空间；带重试：立即 + 30s + 2min + 5min）
 function syncTokenToCloudflare(tokenStr, attempt) {
-    fetch(FEISHU_CLOUDFLARE_PROXY_URL + '/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain', 'x-yxt-secret': 'yxt-feishu-2026' },
-        body: tokenStr
-    }).then(function(resp) {
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        console.log('✅ token 已同步到 Cloudflare KV');
-    }).catch(function(e) {
-        if (attempt < 3) {
-            var delays = [30000, 120000, 300000];
-            setTimeout(function() { syncTokenToCloudflare(tokenStr, attempt + 1); }, delays[attempt]);
-        } else {
-            console.log('⚠️ token 同步 Cloudflare KV 失败（已重试3次）: ' + e.message);
-        }
+    var targets = [FEISHU_PAGES_PROXY_URL, FEISHU_CLOUDFLARE_PROXY_URL];
+    targets.forEach(function(tu) {
+        fetch(tu + '/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain', 'x-yxt-secret': 'yxt-feishu-2026' },
+            body: tokenStr
+        }).then(function(resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            console.log('✅ token 已同步到 Cloudflare KV（' + tu + '）');
+        }).catch(function(e) {
+            if (attempt < 3) {
+                var delays = [30000, 120000, 300000];
+                setTimeout(function() { syncTokenToCloudflare(tokenStr, attempt + 1); }, delays[attempt]);
+            } else {
+                console.log('⚠️ token 同步 Cloudflare KV 失败（已重试3次）: ' + e.message);
+            }
+        });
     });
 }
 
