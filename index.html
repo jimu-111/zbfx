@@ -306,9 +306,51 @@ const FEISHU_CONFIG = {
 const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','陆鑫':'青岛','葛玉鹏':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都','刘锐':'成都' };
 
 const FEISHU_PROXY_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co/functions/v1/feishu-proxy';
+const FEISHU_CLOUDFLARE_PROXY_URL = 'https://feishu-proxy.xuhang1117.workers.dev'; // Cloudflare Worker 代理（2026-09-04）
 const FEISHU_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmeHduaXhsdmR4YXdveWxoZ3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMDEyNzIsImV4cCI6MjA5Nzc3NzI3Mn0.aPfO4Ry_LzoOColCVx64JQPF-BWga-_J2fX9hg-E4G8';
 const SUPABASE_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co';
 const SUPABASE_KEY = FEISHU_SUPABASE_KEY;
+
+// 三层线路（2026-09-04 Supabase 配额耗尽）：Supabase云端 → Cloudflare免费代理 → 本地代理
+// 某线路失败后熔断 5 分钟跳过；Cloudflare 线路超时 5 秒快速跳过
+let _proxyDownUntil = {};
+function getProxyUrlList() {
+    return [FEISHU_PROXY_URL, FEISHU_CLOUDFLARE_PROXY_URL, 'http://localhost:3456/feishu-proxy'];
+}
+async function fetchWithTimeout(url, options, timeoutMs) {
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, timeoutMs);
+    try {
+        return await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+    } finally {
+        clearTimeout(timer);
+    }
+}
+async function fetchViaProxy(proxyHeaders, options, timeoutMs) {
+    var urls = getProxyUrlList();
+    var lastErr = null;
+    for (var i = 0; i < urls.length; i++) {
+        var pu = urls[i];
+        if (_proxyDownUntil[pu] && Date.now() < _proxyDownUntil[pu]) continue;
+        try {
+            var puTimeout = (pu.indexOf('workers.dev') >= 0) ? 5000 : (timeoutMs || 20000);
+            var resp = await fetchWithTimeout(pu, {
+                method: 'POST',
+                headers: proxyHeaders,
+                body: (options && options.body) || undefined
+            }, puTimeout);
+            if (resp.ok) { if (_proxyDownUntil[pu]) delete _proxyDownUntil[pu]; return resp; }
+            var _et = '';
+            try { _et = await resp.text(); } catch(e) {}
+            lastErr = new Error('代理请求失败: ' + resp.status + (_et ? ' ' + _et.substring(0, 120) : ''));
+            _proxyDownUntil[pu] = Date.now() + 300000;
+        } catch(e) {
+            lastErr = e;
+            _proxyDownUntil[pu] = Date.now() + 300000;
+        }
+    }
+    throw lastErr || new Error('代理请求失败: 所有线路不可用');
+}
 
 // ==================== 2. 全局状态 ====================
 let allErrors = [];           // 失误数据
@@ -349,15 +391,7 @@ async function feishuApiFetch(url, options) {
     }
     // gzip压缩传输：大表JSON压缩率达10倍以上，实测161KB vs 2.16MB、2.3s vs 9.7s
     proxyHeaders['Accept-Encoding'] = 'gzip';
-    var resp = await fetch(FEISHU_PROXY_URL, {
-        method: 'POST',
-        headers: proxyHeaders,
-        body: options.body || undefined
-    });
-    if (!resp.ok) {
-        var errText = await resp.text();
-        throw new Error('代理请求失败: ' + resp.status + ' ' + errText);
-    }
+    var resp = await fetchViaProxy(proxyHeaders, options, 20000);
     var data = await resp.json();
     if (data.error) { throw new Error(JSON.stringify(data.error)); }
     return { ok: true, json: function() { return Promise.resolve(data); } };
@@ -416,6 +450,21 @@ async function getCloudToken() {
             }
         }
     } catch(e) {}
+    // Cloudflare KV 兜底（Supabase 402 期间共享不中断）
+    try {
+        var cfResp = await fetchWithTimeout(FEISHU_CLOUDFLARE_PROXY_URL + '/token', {
+            headers: { 'x-yxt-secret': 'yxt-feishu-2026' }
+        }, 8000);
+        var cfData = await cfResp.json();
+        if (cfData && cfData.value) {
+            var cfStored = JSON.parse(cfData.value);
+            if (cfStored && cfStored.expiresAt > Date.now() + 60000) {
+                localStorage.setItem('feishu_token', cfData.value);
+                console.log('☁️ 从 Cloudflare 恢复了有效的 feishu_token');
+                return cfStored.access_token;
+            }
+        }
+    } catch(e) {}
     return null;
 }
 
@@ -441,14 +490,36 @@ async function getTenantToken() {
 
 function saveToken(token, refreshToken, expiresIn) {
     var tokenData = { access_token: token, refresh_token: refreshToken, expiresAt: Date.now() + expiresIn * 1000 };
-    localStorage.setItem('feishu_token', JSON.stringify(tokenData));
+    var tokenStr = JSON.stringify(tokenData);
+    localStorage.setItem('feishu_token', tokenStr);
     try {
         fetch(SUPABASE_URL + '/rest/v1/app_data', {
             method: 'POST',
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-            body: JSON.stringify({ key: 'feishu_token', value: JSON.stringify(tokenData), updated_at: new Date().toISOString() })
+            body: JSON.stringify({ key: 'feishu_token', value: tokenStr, updated_at: new Date().toISOString() })
         }).catch(function(){});
     } catch(e) {}
+    // 双写 Cloudflare KV（带重试应对 workers.dev 间歇性网络）
+    syncTokenToCloudflare(tokenStr, 0);
+}
+
+// token 写入 Cloudflare KV（带重试：立即 + 30s + 2min + 5min）
+function syncTokenToCloudflare(tokenStr, attempt) {
+    fetch(FEISHU_CLOUDFLARE_PROXY_URL + '/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain', 'x-yxt-secret': 'yxt-feishu-2026' },
+        body: tokenStr
+    }).then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        console.log('✅ token 已同步到 Cloudflare KV');
+    }).catch(function(e) {
+        if (attempt < 3) {
+            var delays = [30000, 120000, 300000];
+            setTimeout(function() { syncTokenToCloudflare(tokenStr, attempt + 1); }, delays[attempt]);
+        } else {
+            console.log('⚠️ token 同步 Cloudflare KV 失败（已重试3次）: ' + e.message);
+        }
+    });
 }
 
 async function acquireToken() {
