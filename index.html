@@ -717,6 +717,29 @@ async function fetchPanZeSupabase(monday, sunday) {
     return dailyList;
 }
 
+// Supabase 402 期间兜底：从优学堂本地服务（localhost:3456）拉判责量（2026-09-04）
+// Supabase 恢复后 fetchPanZeSupabase 正常拿到数据，此函数不再被调用，自动回到 Supabase
+// ?after=周起点：本地服务只解析缺失日期的Excel文件（首次解析大文件较慢，超时放宽到3分钟）
+async function fetchPanZeLocalFallback(monday, sunday) {
+    var dailyList = [];
+    try {
+        var mondayStr = formatDate(monday), sundayStr = formatDate(sunday);
+        var ctrl = new AbortController();
+        var timer = setTimeout(function() { ctrl.abort(); }, 180000);
+        var resp = await fetch('http://localhost:3456/panze-local?after=' + mondayStr, { signal: ctrl.signal });
+        clearTimeout(timer);
+        var data = await resp.json();
+        if (data && data.ok && Array.isArray(data.dailyList)) {
+            data.dailyList.forEach(function(day) {
+                if (day.date >= mondayStr && day.date <= sundayStr && day.map) {
+                    dailyList.push({ dateStr: day.date, date: new Date(day.date), map: day.map });
+                }
+            });
+        }
+    } catch(e) {}
+    return dailyList;
+}
+
 var _sheetRowCounts = null; // 缓存sheets/query结果，两阶段加载共用
 var _columnACache = {};     // 缓存各sheet的A列（日期列）+最后有效行号，定位两阶段复用
 var _sheetLocCache = {};    // 首批抽检表定位结果缓存（二批复用首批起点，避免重叠读取）
@@ -795,6 +818,14 @@ async function fetchAllData(token, phase) {
             if (isRest) { monday = wkOpts[4].monday; sunday = wkOpts[2].sunday; }
             else { monday = wkOpts[1].monday; sunday = wkOpts[0].sunday; }
             var dailyList = await fetchPanZeSupabase(monday, sunday);
+            if (dailyList.length === 0) {
+                // Supabase 拉空（402 配额耗尽等）→ 从优学堂本地服务兜底（2026-09-04）
+                var localList = await fetchPanZeLocalFallback(monday, sunday);
+                if (localList.length > 0) {
+                    console.log('[计时] ' + phaseLabel + ' 判责量走本地兜底，拿到 ' + localList.length + ' 天');
+                    return { ok: true, type: 'panze_supabase', name: 'Supabase判责量', dailyList: localList };
+                }
+            }
             console.log('[计时] ' + phaseLabel + ' Supabase判责量 耗时 ' + (Date.now() - t0) + 'ms, 拿到 ' + dailyList.length + ' 天');
             return { ok: true, type: 'panze_supabase', name: 'Supabase判责量', dailyList: dailyList };
         } catch(e) {
