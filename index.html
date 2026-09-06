@@ -55,6 +55,10 @@ body {
 .week-nav-btn:hover { background: #f1f5f9; }
 .week-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .week-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: var(--bg-card); color: var(--text-primary); cursor: pointer; min-width: 180px; }
+.unit-switch { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-right: 2px; }
+.unit-switch-btn { padding: 6px 13px; border: none; background: var(--bg-card); cursor: pointer; font-size: 0.8rem; color: var(--text-secondary); transition: all 0.15s; }
+.unit-switch-btn:hover { background: #f1f5f9; }
+.unit-switch-btn.active { background: var(--primary); color: white; font-weight: 600; }
 
 /* ========== 加载/错误状态 ========== */
 .loading-spinner { text-align: center; padding: 60px 20px; color: var(--text-muted); }
@@ -152,6 +156,53 @@ tr.row-err-mid td { background: #fde8e8 !important; }
 .et-bar.cat-3 { background: #2a5298; }
 .et-bar.cat-4 { background: #5e6f8d; }
 .et-bar-other { background: #b0b8c0; }
+/* 双周期对比汇总表（周/月通用，2026-09-05） */
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.cmp-table th { text-align: right; padding: 5px 6px; font-size: 0.72rem; color: #5e6f8d; border-bottom: 1px solid var(--border); }
+.cmp-table th:first-child, .cmp-table td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); }
+.cmp-table td { text-align: right; padding: 6px 6px; border-bottom: 1px dotted var(--border); }
+.cmp-table tr:last-child td { border-bottom: none; }
+/* 转置对比表（2026-09-06 样式：列平分宽度/内容居中/底色统一/圆角卡片边缘） */
+.cmp-table.cmp-trans { table-layout: fixed; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.cmp-table.cmp-trans th, .cmp-table.cmp-trans td { text-align: center; }
+.cmp-table.cmp-trans th:first-child, .cmp-table.cmp-trans td:first-child { text-align: center; width: 15%; color: var(--text-primary); }
+/* 月度失误分析：三来源纵排整块（2026-09-05） */
+.m-block { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+.m-block-title { font-size: 0.92rem; font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.m-block .sub-title { font-size: 0.8rem; font-weight: 600; color: var(--primary); margin: 14px 0 8px; }
+.m-grid2 { display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; }
+.m-grid2 .error-summary, .m-grid2 .error-toplist { height: 100%; }
+/* 月度块：类别排比卡 + 月内周度走势卡 并排（2026-09-06） */
+.m-flex2 { display: flex; gap: 12px; align-items: stretch; margin-top: 12px; }
+.m-flex2 > .error-toplist { flex: 1; min-width: 0; margin-top: 0; }
+.error-weektrend { flex: 1; min-width: 0; background: #f8fafc; border: 1px solid var(--border); padding: 16px 14px; }
+.error-weektrend .ewt-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; color: var(--primary); }
+.ewt-grid { display: grid; align-items: center; column-gap: 4px; }
+.ewt-grid + .ewt-grid { margin-top: 3px; }
+.ewt-h { text-align: center; font-size: 0.72rem; font-weight: 600; color: #5e6f8d; border-bottom: 1px solid var(--border); padding: 2px 0 4px; }
+.ewt-h:first-child { text-align: left; }
+.ewt-date { font-weight: 400; color: #94a3b8; }
+.ewt-name { font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 6px; }
+.ewt-cell { height: 24px; line-height: 24px; border-radius: 4px; text-align: center; font-size: 0.75rem; font-weight: 600; }
+.ewt-note { margin-top: 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.6; }
+/* 月度失误分析顶部 5 张等宽卡（2026-09-06 整合版：初审/抽检/QA + 明显失误 + 低级·投诉失误） */
+.dim5-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.dim5-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 10px 10px; cursor: pointer; text-align: center; }
+.dim5-card:hover { border-color: var(--primary-light); }
+.dim5-sel { outline: 2px solid var(--primary); outline-offset: 1px; }
+.d5-label { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+.d5-label i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.d5-num { font-size: 1.55rem; font-weight: 700; line-height: 1.3; margin: 2px 0; }
+.d5-sub { font-size: 0.68rem; color: var(--text-muted); min-height: 15px; }
+.dim-hint { font-size: 0.72rem; color: #94a3b8; margin: 10px 0 2px; }
+/* 明细行隐藏按钮 */
+.row-hide-btn { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; cursor: pointer; font-size: 0.72rem; line-height: 1; }
+.row-hide-btn:hover { background: #fee2e2; color: #c0392b; }
+@media (max-width: 900px) {
+    .m-grid2 { grid-template-columns: 1fr; }
+    .m-flex2 { flex-direction: column; }
+    .dim5-cards { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ========== 分页 ========== */
 .pagination { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 16px; }
@@ -204,6 +255,10 @@ tr.row-err-mid td { background: #fde8e8 !important; }
         <div class="header-title">📊 品控周报分析</div>
         <div class="header-controls">
             <div class="week-selector">
+                <div class="unit-switch" id="unitSwitch">
+                    <button class="unit-switch-btn active" data-unit="week">周</button>
+                    <button class="unit-switch-btn" data-unit="month">月</button>
+                </div>
                 <button class="week-nav-btn" id="btnPrevWeek" title="上一周">◀</button>
                 <select class="week-select" id="weekSelect"></select>
                 <button class="week-nav-btn" id="btnNextWeek" title="下一周">▶</button>
@@ -231,14 +286,14 @@ tr.row-err-mid td { background: #fde8e8 !important; }
 
     <!-- 周报文本（自动生成，可复制） -->
     <div class="section" id="reportSection" style="display:none;">
-        <div class="section-title">📝 周报文本（自动生成）
+        <div class="section-title"><span id="reportTitleText">📝 周报文本（自动生成）</span>
             <span style="display:flex;align-items:center;gap:8px;">
                 <button class="btn btn-sm" id="btnCopyReport" style="margin-left:8px;" title="复制周报文本">📋 复制</button>
-                <button class="btn btn-sm" onclick="screenshotSection('reportSection','周报文本')" title="截图周报文本">📸</button>
+                <button class="btn btn-sm" id="btnShotReport" onclick="screenshotSection('reportSection', getReportSecLabel())" title="截图周报文本">📸</button>
             </span>
         </div>
         <textarea id="reportText" readonly style="width:100%;height:230px;padding:12px 14px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;line-height:1.8;font-family:'PingFang SC','Microsoft YaHei',monospace;color:var(--text-primary);background:#fafcfd;resize:vertical;outline:none;"></textarea>
-        <div class="section-meta" style="margin-top:6px;font-size:0.75rem;color:var(--text-muted);">随周次/站点筛选自动更新，点击「复制」即可粘贴到周报</div>
+        <div class="section-meta" id="reportHint" style="margin-top:6px;font-size:0.75rem;color:var(--text-muted);">随周次/站点筛选自动更新，点击「复制」即可粘贴到周报</div>
     </div>
 
     <!-- 抽检明细 -->
@@ -248,17 +303,18 @@ tr.row-err-mid td { background: #fde8e8 !important; }
             <table class="data-table" id="personTable" style="table-layout:fixed;">
                 <thead>
                     <tr>
-                        <th style="width:10%;">#</th>
+                        <th style="width:4%;">#</th>
                         <th class="sortable" data-sort="name" style="width:10%;">姓名 <span class="sort-arrow"></span></th>
-                        <th style="width:10%;">站点</th>
-                        <th class="sortable col-num" data-sort="sampling" style="width:10%;">抽检量 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="panZe" style="width:10%;">判责量 <span class="sort-arrow"></span></th>
+                        <th style="width:8%;">站点</th>
+                        <th class="sortable col-num" data-sort="sampling" style="width:9%;">抽检量 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="panZe" style="width:9%;">判责量 <span class="sort-arrow"></span></th>
                         <th class="sortable col-num" data-sort="coverage" style="width:10%;">抽检覆盖率 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="errors" style="width:10%;">抽检失误 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="totalErrors" style="width:10%;">总失误 <span class="sort-arrow"></span></th>
-                        <th class="sortable col-num" data-sort="accuracy" style="width:10%;">判责准确率 <span class="sort-arrow">▼</span></th>
-                        <th style="width:10%;">四周趋势</th>
-                        <th style="width:10%;">变化</th>
+                        <th class="sortable col-num" data-sort="errors" style="width:7%;">抽检失误 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="samplingAccuracy" style="width:9%;">抽检准确率 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="totalErrors" style="width:7%;">总失误 <span class="sort-arrow"></span></th>
+                        <th class="sortable col-num" data-sort="accuracy" style="width:13%;">判责准确率 <span class="sort-arrow">▼</span></th>
+                        <th style="width:10%;" id="personTrendTh">四周趋势</th>
+                        <th style="width:4%;">变化</th>
                     </tr>
                 </thead>
                 <tbody id="personTbody"></tbody>
@@ -365,6 +421,13 @@ let personSortAsc = true;       // 排序方向（准确率默认升序：低的
 let activeErrorTab = '初审';  // 当前失误分析Tab
 let currentSite = '成都';       // 当前站点筛选：默认成都
 let dataReady = false;
+// ===== 周期维度（2026-09-05）：'week'=周（默认，原逻辑不变）| 'month'=月（逻辑月=上月27~本月26）=====
+let viewUnit = 'week';          // 当前维度
+let monthOptions = [];          // 月选项 [本月, 上月] {label,monday,sunday,isCurrent}
+let currentMonthIndex = 0;      // 0=本月, 1=上月
+let _windowStartDate = null;    // 最近一次首批拉取的全窗口起点（判断月补拉是否已覆盖）
+let _initRunning = false;       // initData 双批加载中（防止切月补拉与加载竞态）
+let _pendingUnitReload = false; // 加载中收到补拉请求 → 收尾后自动重跑
 
 // ==================== 2b. 名字修正（与优学堂后台 fixFeishuChouJianName 一致） ====================
 const PANZE_NAME_FIX = { '吴晖':'吴辉','樊昱舜':'樊景舜','樊慧舞':'樊景舜','李思林':'李忠林','姜钧琪':'麦钧淇','麦钧琪':'麦钧淇','彭土观':'彭士观' };
@@ -609,16 +672,34 @@ function formatShortDate(d) {
     return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
 }
 
+function getLogicMonthOfDate(d) {
+    // 逻辑月归月规则（2026-09-05 抽取，周编号与月维度共用）：日期 >=27 日归下月
+    var lm = d.getMonth(), ly = d.getFullYear();
+    if (d.getDate() >= 27) { lm++; if (lm > 11) { lm = 0; ly++; } }
+    return { lm: lm, ly: ly };
+}
+
+function getLogicMonthRange(lm, ly) {
+    // 逻辑月窗口 [lm 月 27日 00:00, lm 月 26日 23:59:59.999]（new Date 自动处理跨年：lm-1=-1 → 前年12月27）
+    return {
+        monday: new Date(ly, lm - 1, 27, 0, 0, 0, 0),
+        sunday: new Date(ly, lm, 26, 23, 59, 59, 999)
+    };
+}
+
+function monthLabelOf(start) {
+    // 逻辑月窗口起点(27日) → 所属月标签：2026-08-27 → '9月'
+    return (getLogicMonthOfDate(start).lm + 1) + '月';
+}
+
 function getWeekLabel(monday) {
-    var d = monday.getDate(), m = monday.getMonth(), y = monday.getFullYear();
-    var logicM = d >= 27 ? m + 1 : m;
-    if (logicM > 11) { logicM = 0; y++; }
-    var startM = logicM - 1;
-    if (startM < 0) { startM = 11; y--; }
-    var firstMon = new Date(y, startM, 27);
+    // 周序号 = 该逻辑月窗口内从第一个周一起的周次（行为与原实现一致，2026-09-05 抽取公共逻辑月工具）
+    var info = getLogicMonthOfDate(monday);
+    var lm = info.lm, ly = info.ly;
+    var firstMon = new Date(ly, lm - 1, 27);
     while (firstMon.getDay() !== 1) firstMon.setDate(firstMon.getDate() + 1);
     var wn = Math.floor((monday - firstMon) / (7 * 86400000)) + 1;
-    return (logicM + 1) + '月第' + wn + '周';
+    return (lm + 1) + '月第' + wn + '周';
 }
 
 function getMonday(date) {
@@ -642,9 +723,12 @@ function buildWeekOptions() {
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var thisMonday = getMonday(today);
     var options = [];
-    for (var w = 0; w < 5; w++) {
+    // 默认5周（原逻辑）；月补拉后内存数据起点提前（_windowStartDate）→ 周下拉顺带扩档到全部内存周
+    var minM = (_windowStartDate && viewUnit === 'month') ? getMonday(_windowStartDate) : null;
+    for (var w = 0; w < (minM ? 30 : 5); w++) {
         var monday = new Date(thisMonday);
         monday.setDate(thisMonday.getDate() - w * 7);
+        if (minM && monday.getTime() < minM.getTime()) break;
         var sunday = getSunday(monday);
         var label = getWeekLabel(monday) + '（' + formatShortDate(monday) + '~' + formatShortDate(sunday) + '）';
         options.push({ label: label, monday: monday, sunday: sunday, isCurrent: w === 0 });
@@ -652,6 +736,31 @@ function buildWeekOptions() {
     return options;
 }
 
+function buildMonthOptions() {
+    // 逻辑月选项：[本月(27~26), 上月(27~26)]；如 2026-09-05 → [9月(08/27~09/26), 8月(07/27~08/26)]
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var cur = getLogicMonthOfDate(today);
+    function mk(lm, ly, isCurrent) {
+        var r = getLogicMonthRange(lm, ly);
+        return {
+            label: monthLabelOf(r.monday) + '（' + formatShortDate(r.monday) + '~' + formatShortDate(r.sunday) + '）',
+            monday: r.monday, sunday: r.sunday, isCurrent: isCurrent
+        };
+    }
+    return [mk(cur.lm, cur.ly, true), mk(cur.lm - 1, cur.ly, false)];
+}
+
+// ===== 周期维度薄封装（周/月共用，2026-09-05）=====
+function getPeriodOptions() { return viewUnit === 'month' ? monthOptions : weekOptions; }
+function getCurIndex() { return viewUnit === 'month' ? currentMonthIndex : currentWeekIndex; }
+function periodDepth() { return viewUnit === 'month' ? 2 : 4; } // 数据列+趋势窗口的周期数：周=4，月=2
+function getPeriodLabel(wd) { return viewUnit === 'month' ? monthLabelOf(wd.monday) : getWeekLabel(wd.monday); }
+function unitWords(idx) {
+    // 周期文案：周=本周/上周；月=本月/上月（选中上月时无环比词）
+    if (viewUnit === 'week') return { cur: '本周', prev: '上周' };
+    return idx === 0 ? { cur: '本月', prev: '上月' } : { cur: '上月', prev: null };
+}
 function parseDateValue(val) {
     if (!val) return null;
     if (val instanceof Date) {
@@ -831,14 +940,28 @@ async function locateStartRow(spreadsheetToken, sheetId, token, targetDate, buff
     }
 }
 
+function getFetchTargets() {
+    // 拉取窗口目标（2026-09-05 按维度）：周=原5周两批不变；月=首批本月27日~今天、二批上月27日~26日
+    if (viewUnit === 'month') {
+        var mo = buildMonthOptions();
+        var now = new Date();
+        var todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        return { firstStart: mo[0].monday, firstEnd: todayEnd, fullStart: mo[1].monday, fullEnd: mo[1].sunday };
+    }
+    var wk = buildWeekOptions();
+    // 与原逻辑对应：首批判责量[2周前周一,本周日]、二批[5周前周一,3周前周日]
+    return { firstStart: wk[1].monday, firstEnd: wk[0].sunday, fullStart: wk[4].monday, fullEnd: wk[2].sunday };
+}
+
 async function fetchAllData(token, phase) {
-    // phase: 'first2'=首批（失误表读5周区间，抽检表读2周区间，先渲染）| 'rest2'=二批（抽检表补3~5周区间）
+    // phase: 'first2'=首批（失误表读完整窗口，抽检表读首批窗口，先渲染）| 'rest2'=二批（抽检表补完整窗口剩余）
     var isRest = (phase === 'rest2');
     var phaseLabel = isRest ? '[二批]' : '[首批]';
-    var wkOpts = buildWeekOptions();
-    var targetFirst = wkOpts[1].monday; // 2周前周一：首批抽检表起点
-    var targetAll = wkOpts[4].monday;   // 5周前周一：完整5周区间起点
-    var BUFFER_ROWS = 500;              // 定位起点往前多读的兜底行数（约1天数据）
+    var tg = getFetchTargets();
+    var targetFirst = tg.firstStart; // 首批抽检表起点（周=2周前周一；月=本月27日）
+    var targetAll = tg.fullStart;    // 完整窗口起点（周=5周前周一；月=上月27日）
+    var BUFFER_ROWS = 500;           // 定位起点往前多读的兜底行数（约1天数据）
+    if (!isRest) _windowStartDate = targetAll; // 记录全窗口起点（供切月补拉判断，2026-09-05）
 
     // 先查所有sheet的行数（元数据，很快），两阶段共用缓存
     if (!_sheetRowCounts) {
@@ -859,14 +982,13 @@ async function fetchAllData(token, phase) {
     }
     var sheetRowCounts = _sheetRowCounts;
 
-    // Supabase判责量（每日 feishu_panze_* 同步数据）：首批拉最近2周，二批拉第3~5周
+    // Supabase判责量（每日 feishu_panze_* 同步数据）：首批拉首批窗口（周=最近2周/月=本月27日~今天），二批拉剩余窗口
     // 独立域名，与飞书请求并行，不参与飞书串行队列
     var supabaseTask = (async function() {
         var t0 = Date.now();
         try {
-            var monday, sunday;
-            if (isRest) { monday = wkOpts[4].monday; sunday = wkOpts[2].sunday; }
-            else { monday = wkOpts[1].monday; sunday = wkOpts[0].sunday; }
+            var monday = isRest ? tg.fullStart : tg.firstStart;
+            var sunday = isRest ? tg.fullEnd : tg.firstEnd;
             var dailyList = await fetchPanZeSupabase(monday, sunday);
             if (dailyList.length === 0) {
                 // Supabase 拉空（402 配额耗尽等）→ 从优学堂本地服务兜底（2026-09-04）
@@ -1164,6 +1286,7 @@ function computeWeekData(errors, sampling, panZe, monday, sunday, siteFilter) {
             totalErrors: totalErrs,  // 抽检/初审/QA 失误总数
             rate: s.sampling > 0 ? (cjErrs / s.sampling * 100) : 0,
             accuracy: acc,
+            samplingAccuracy: s.sampling > 0 ? Math.max(0, (s.sampling - cjErrs) / s.sampling * 100) : null, // 抽检准确率=(抽检量-抽检失误)/抽检量，无抽检量为null
             coverage: cov
         });
     });
@@ -1270,13 +1393,14 @@ function getLightTag(rate) {
 
 // ==================== 8. UI渲染 ====================
 function renderKpiTable(weekData, allWeeks) {
-    // 取至多4周数据：当前周 + 前3周
+    // 取周期窗口数据（周=4周：选中周+前3周；月=2月：本月+上月）；数据不足的列填空
+    var depth = periodDepth();
     var weeks = [];
-    for (var w = 0; w < 4; w++) {
-        var idx = currentWeekIndex + w;
+    for (var w = 0; w < depth; w++) {
+        var idx = getCurIndex() + w;
         weeks.push((idx < allWeeks.length && allWeeks[idx]) ? allWeeks[idx] : null);
     }
-    // weeks[0]=选中周, weeks[1]=上周, weeks[2]=前周, weeks[3]=前三周
+    // weeks[0]=选中周期, weeks[1]=上一周期, ...（月模式 weeks=[本月,上月] 或 [上月, 无]）
 
     // 辅助：格式化环比（本周 vs 上周）
     function deltaVal(cur, prev, unit) {
@@ -1292,7 +1416,7 @@ function renderKpiTable(weekData, allWeeks) {
         return cur > prev ? '#27ae60' : (cur < prev ? '#c0392b' : '#94a3b8');
     }
 
-    // 取每个指标4周的值
+    // 取每个指标各周期的值
     function vals(field) { return weeks.map(function(w) { return w ? w[field] : null; }); }
 
     var rows = [
@@ -1313,7 +1437,7 @@ function renderKpiTable(weekData, allWeeks) {
     // 表头
     html += '<thead><tr><th style="width:' + colWidth + ';">指标</th><th style="width:' + colWidth + ';">环比</th>';
     weeks.forEach(function(w, i) {
-        var label = w ? getWeekLabel(w.monday) : '--';
+        var label = w ? periodLabelHtml(w) : '--';
         var dateRange = w ? formatShortDate(w.monday) + '~' + formatShortDate(w.sunday) : '';
         var cellContent = (i === 0 ? '📌 ' : '') + label + '<br><span style="font-weight:400;font-size:0.7rem;color:#5e6f8d;">' + dateRange + '</span>';
         html += '<th style="width:' + colWidth + ';">' + cellContent + '</th>';
@@ -1483,6 +1607,7 @@ function sortPersonStats(stats, col, asc) {
             case 'panZe': va = a.panZe; vb = b.panZe; break;
             case 'coverage': va = a.coverage; vb = b.coverage; break;
             case 'errors': va = a.errors; vb = b.errors; break;
+            case 'samplingAccuracy': va = a.samplingAccuracy; vb = b.samplingAccuracy; break;
             case 'accuracy': va = a.accuracy; vb = b.accuracy; break;
             case 'totalErrors': va = a.totalErrors; vb = b.totalErrors; break;
             case 'rate':
@@ -1545,14 +1670,14 @@ function renderPersonTable(weekData, allWeeks) {
 
     var stats = sortPersonStats(weekData.personStats, personSortCol, personSortAsc);
 
-    // 构建每人最近4周准确率历史（以选定周为基准：选定周+往前3周；索引0=最远, 索引N-1=选定周，没数据的周填null占位）
+    // 构建每人最近周期准确率历史（以选定周期为基准往前取，周=4、月=2；索引0=最远, 索引N-1=选定周期，没数据的周期填null占位）
     var accHistoryMap = {};
-    var maxWeeks = Math.min(allWeeks.length - currentWeekIndex, 4);
+    var maxWeeks = Math.min(allWeeks.length - getCurIndex(), periodDepth());
     stats.forEach(function(p) { accHistoryMap[p.name] = new Array(maxWeeks).fill(null); });
     for (var wi = maxWeeks - 1; wi >= 0; wi--) {
-        var wd = allWeeks[currentWeekIndex + wi];
+        var wd = allWeeks[getCurIndex() + wi];
         if (!wd || !wd.personStats) continue;
-        var idx = maxWeeks - 1 - wi; // 选定周=最后一个位置
+        var idx = maxWeeks - 1 - wi; // 选定周期=最后一个位置
         wd.personStats.forEach(function(ps) {
             if (accHistoryMap[ps.name] !== undefined) {
                 accHistoryMap[ps.name][idx] = ps.accuracy;
@@ -1567,11 +1692,12 @@ function renderPersonTable(weekData, allWeeks) {
     stats.forEach(function(p) { totalSamplingAll += p.sampling; totalPanZeAll += (p.panZe || 0); totalErrorsAll += p.errors; totalAllErrors += (p.totalErrors || 0); });
     var totalCoverageAll = totalPanZeAll > 0 ? (totalSamplingAll / totalPanZeAll * 100) : 0;
     var totalAccuracyAll = totalPanZeAll > 0 ? Math.max(0, (totalPanZeAll - totalAllErrors) / totalPanZeAll * 100) : null;
+    var totalSampleAccAll = totalSamplingAll > 0 ? Math.max(0, (totalSamplingAll - totalErrorsAll) / totalSamplingAll * 100) : null; // 抽检准确率总计口径
 
-    // 计算总计的跨周趋势（判责准确率口径，选定周+往前3周）
+    // 计算总计的跨周期趋势（判责准确率口径，选定周期起往前取）
     var totalAccHistory = [];
     for (var tw = maxWeeks - 1; tw >= 0; tw--) {
-        var twd = allWeeks[currentWeekIndex + tw];
+        var twd = allWeeks[getCurIndex() + tw];
         if (!twd || !twd.personStats) continue;
         var twPanZe = 0, twTotalErrors = 0;
         twd.personStats.forEach(function(ps) { twPanZe += (ps.panZe || 0); twTotalErrors += (ps.totalErrors || 0); });
@@ -1591,6 +1717,7 @@ function renderPersonTable(weekData, allWeeks) {
         "<td class=\"col-num\">" + totalPanZeAll + "</td>" +
         "<td class=\"col-num\">" + (totalPanZeAll > 0 ? totalCoverageAll.toFixed(2) + "%" : "--") + "</td>" +
         "<td class=\"col-num\">" + totalErrorsAll + "</td>" +
+        "<td class=\"col-num fw-600\" style=\"color:" + (totalSampleAccAll === null ? "#94a3b8" : (totalSampleAccAll >= 99.5 ? "#27ae60" : (totalSampleAccAll < 99 ? "#c0392b" : "#f39c12"))) + "\">" + (totalSampleAccAll === null ? "--" : totalSampleAccAll.toFixed(2) + "%") + "</td>" +
         "<td class=\"col-num fw-600\">" + totalAllErrors + "</td>" +
         "<td class=\"col-num fw-600\" style=\"color:" + totalAccColor + "\">" + totalAccTxt + "</td>" +
         "<td class=\"col-num\">" + (totalSpark || "<span class=\"text-muted\">--</span>") + "</td>" +
@@ -1618,6 +1745,17 @@ function renderPersonTable(weekData, allWeeks) {
         } else {
             accTxt = p.accuracy.toFixed(2) + '%'; accColor = '#27ae60'; lightTag = '<span class="tag tag-green">🟢</span>';
         }
+        // 抽检准确率=(抽检量-抽检失误)/抽检量：<99%红 99-99.49%黄 ≥99.5%绿；无抽检量→灰'--'（行底色灯仍随判责准确率）
+        var sampAccTxt, sampAccColor;
+        if (p.samplingAccuracy === null || p.samplingAccuracy === undefined) {
+            sampAccTxt = '--'; sampAccColor = '#94a3b8';
+        } else if (p.samplingAccuracy < 99) {
+            sampAccTxt = p.samplingAccuracy.toFixed(2) + '%'; sampAccColor = '#c0392b';
+        } else if (p.samplingAccuracy < 99.5) {
+            sampAccTxt = p.samplingAccuracy.toFixed(2) + '%'; sampAccColor = '#f39c12';
+        } else {
+            sampAccTxt = p.samplingAccuracy.toFixed(2) + '%'; sampAccColor = '#27ae60';
+        }
         var lightClass = (p.accuracy === null || p.accuracy === undefined) ? '' : (p.accuracy < 99 ? 'row-red' : (p.accuracy < 99.5 ? 'row-yellow' : 'row-green'));
 
         tbody += '<tr class="' + lightClass + '">' +
@@ -1628,9 +1766,10 @@ function renderPersonTable(weekData, allWeeks) {
             '<td class="col-num fw-600">' + (p.panZe || 0) + '</td>' +
             '<td class="col-num">' + (p.panZe > 0 ? p.coverage.toFixed(2) + '%' : '--') + '</td>' +
             '<td class="col-num">' + p.errors + '</td>' +
+            '<td class="col-num fw-600" style="color:' + sampAccColor + '">' + sampAccTxt + '</td>' +
             '<td class="col-num fw-600">' + (p.totalErrors || 0) + '</td>' +
             '<td class="col-num fw-600" style="color:' + accColor + '">' + accTxt + ' ' + lightTag + '</td>' +
-            '<td class="col-num" style="cursor:pointer;" onclick="showPersonDetail(\'' + p.name.replace(/'/g, "\\'") + '\')" title="点击查看' + p.name + '近几周趋势">' + (sparklineHTML || '<span class="text-muted">--</span>') + '</td>' +
+            '<td class="col-num" style="cursor:pointer;" onclick="showPersonDetail(\'' + p.name.replace(/'/g, "\\'") + '\')" title="点击查看' + p.name + (viewUnit === 'month' ? '近几月' : '近几周') + '趋势">' + (sparklineHTML || '<span class="text-muted">--</span>') + '</td>' +
             '<td class="text-center">' + trendIcon + '</td>' +
             '</tr>';
     });
@@ -1646,6 +1785,8 @@ function renderPersonTable(weekData, allWeeks) {
 }
 
 function renderErrorAnalysis(weekData, prevWeekData) {
+    // 月维度：三来源纵排整块（无互斥Tab、无明细表）→ 直接走月度渲染
+    if (viewUnit === 'month') { renderErrorMonthly(weekData, prevWeekData); return; }
     var src = activeErrorTab;
     var catStats = weekData.categoryStats[src] || [];
     var prevCatMap = {};
@@ -1661,18 +1802,12 @@ function renderErrorAnalysis(weekData, prevWeekData) {
         src === '初审' ? prevWeekData.csErrors : (src === '抽检' ? prevWeekData.cjErrors : prevWeekData.qaErrors)
     ) : 0;
 
-    var totalTrend = prevWeekData ? computeTrend(totalErrors, prevTotal) : null;
-
-    // 汇总统计
+    // 汇总：双周期对比表（本周 vs 上周；2026-09-05 替代原单值汇总卡）
+    var uw = unitWords(getCurIndex());
     var summaryHTML = '<div class="error-summary">' +
-        '<div class="es-title">📊 本周汇总</div>' +
-        '<div class="es-stat"><span>失误总数</span><span class="es-val">' + totalErrors + ' 条</span></div>' +
-        '<div class="es-stat"><span>失误类别数</span><span class="es-val">' + catStats.length + ' 个</span></div>' +
-        '<div class="es-stat"><span>涉及人员</span><span class="es-val">' + weekData.personStats.filter(function(p) { return src === '初审' ? p.errorsCS > 0 : (src === '抽检' ? p.errorsCJ > 0 : p.errorsQA > 0); }).length + ' 人</span></div>';
-    if (totalTrend) {
-        summaryHTML += '<div class="es-stat"><span>环比上周</span><span class="es-val ' + totalTrend.cls + '">' + totalTrend.text + '（上周: ' + prevTotal + '条）</span></div>';
-    }
-    summaryHTML += '</div>';
+        '<div class="es-title">📊 ' + uw.cur + '汇总 · 对比' + uw.prev + '</div>' +
+        buildPeriodCompare(src, weekData, prevWeekData, totalErrors, prevTotal, catStats) +
+        '</div>';
 
     // Top 类别
     var topHTML = '<div class="error-toplist"><div class="et-title">📈 Top 5 失误类别</div>';
@@ -1706,16 +1841,31 @@ function renderErrorAnalysis(weekData, prevWeekData) {
     }
     topHTML += '</div>';
 
-    // 失误明细表
+    // 失误明细表：全量逐条展示 + 每行「✕」手动隐藏（localStorage 长期记忆，2026-09-05）
     var weekErrors = allErrors.filter(function(e) {
         return e.source === src && isInWeek(e.date, weekData.monday, weekData.sunday) && siteMatch(e, currentSite);
     });
-    var detailHTML = '<div style="margin-top:16px;"><div style="font-weight:600;margin-bottom:10px;color:var(--primary);">📋 ' + src + '失误明细</div>';
+    // 备注 key 不带前缀（周模式旧 key，向后兼容已存备注）；m_ 前缀仅用于月视图
+    var noteKey = 'qc_note_' + currentSite + '_' + src + '_' + formatDate(weekData.monday);
+    var hidKey = 'qc_hidden_' + currentSite + '_' + src + '_' + formatDate(weekData.monday);
+    var hiddenSet = loadHiddenSet(hidKey);
+    var shownErrors = [];
+    weekErrors.forEach(function(e) { if (!hiddenSet[errRowKey(e)]) shownErrors.push(e); });
+    var hiddenN = weekErrors.length - shownErrors.length;
+
+    var detailHTML = '<div style="margin-top:16px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+        '<div style="font-weight:600;color:var(--primary);">📋 ' + src + '典型失误订单（' + weekErrors.length + '条' + (hiddenN > 0 ? '，已隐藏 ' + hiddenN + ' 条' : '') + '）</div>' +
+        (hiddenN > 0 ? '<button class="btn btn-sm" data-act="restore" title="恢复本周期全部已隐藏订单">↩️ 恢复全部</button>' : '') +
+        '</div>';
     if (weekErrors.length === 0) {
         detailHTML += '<div class="text-muted text-sm" style="padding:20px;text-align:center;">暂无失误记录</div>';
+    } else if (shownErrors.length === 0) {
+        detailHTML += '<div class="text-muted text-sm" style="padding:20px;text-align:center;">本周期失误订单已全部隐藏 ✅（点击右上「恢复全部」可还原）</div>';
     } else {
         detailHTML += '<div class="table-wrap"><table class="data-table"><thead><tr>' +
             '<th>日期</th><th>站点</th><th>品类</th><th>失误类别</th><th>人员</th><th>备注</th><th>质检码</th>' +
+            '<th class="shot-hide-col" style="width:26px;"></th>' +
             '</tr></thead><tbody>';
         // 分组优先级：低级/投诉(0) 最顶 → 明显失误/扣错项(1) → 其他(2)；组内按类别数量降序，同类内日期降序
         function errPriority(cat) {
@@ -1726,12 +1876,12 @@ function renderErrorAnalysis(weekData, prevWeekData) {
         }
         var catCountMap = {};
         var personCatCountMap = {};
-        weekErrors.forEach(function(e) {
+        shownErrors.forEach(function(e) {
             catCountMap[e.category] = (catCountMap[e.category] || 0) + 1;
             var pk = e.category + '|' + e.reviewer;
             personCatCountMap[pk] = (personCatCountMap[pk] || 0) + 1;
         });
-        weekErrors.sort(function(a, b) {
+        shownErrors.sort(function(a, b) {
             var gp = errPriority(a.category) - errPriority(b.category);
             if (gp !== 0) return gp;
             var cntCmp = (catCountMap[b.category] || 0) - (catCountMap[a.category] || 0);
@@ -1744,7 +1894,7 @@ function renderErrorAnalysis(weekData, prevWeekData) {
             return b.date - a.date;        // 同人内日期新的在前
         });
 
-        weekErrors.forEach(function(e) {
+        shownErrors.forEach(function(e) {
             var searchText = [e.dateStr || '', e.site || '', e.product || '', e.category || '', e.reviewer || '', e.note || '', e.qcCode || ''].join('|').toLowerCase();
             var siteClass = '';
             if (e.site === '深圳') siteClass = 'sz';
@@ -1761,38 +1911,412 @@ function renderErrorAnalysis(weekData, prevWeekData) {
                 '<td>' + e.reviewer + '</td>' +
                 '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (e.note || '') + '">' + (e.note || '--') + '</td>' +
                 '<td>' + (e.qcCode || '--') + '</td>' +
+                '<td class="shot-hide-col" style="width:26px;text-align:center;"><span class="row-hide-btn" data-act="hide" data-hkey="' + errRowKey(e) + '" title="隐藏此行">✕</span></td>' +
                 '</tr>';
         });
         detailHTML += '</tbody></table></div>';
     }
-    // 问题点解析 + 改善方向（竖向排列）
-    var noteKey = 'qc_note_' + currentSite + '_' + src + '_' + formatDate(weekData.monday);
-    detailHTML += '<div style="margin-bottom:10px;">' +
-        '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">🔎 问题点解析</div>' +
-        '<textarea id="errorAnalysisNote" data-note-key="' + noteKey + '" placeholder="记录本周失误的问题点分析…" style="width:100%;height:72px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
-        '<div><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">💡 改善方向</div>' +
-        '<textarea id="errorImproveNote" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:72px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
-    '</div>';
+    // 问题点解析 + 改善方向（左右并排；2026-09-05）
+    detailHTML += '<div style="display:flex;gap:10px;margin-top:12px;">' +
+        '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">🔎 问题点解析</div>' +
+        '<textarea id="errorAnalysisNote" data-note-key="' + noteKey + '" placeholder="记录本周失误的问题点分析…" style="width:100%;height:96px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">💡 改善方向</div>' +
+        '<textarea id="errorImproveNote" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:96px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '</div>';
     detailHTML += '</div>';
 
     document.getElementById('errorTabContent').innerHTML =
         '<div class="error-analysis-grid">' + summaryHTML + topHTML + '</div>' + detailHTML;
 
+    // 明细行「✕」隐藏 / 「恢复全部」（直接绑定，避免内嵌字符串转义问题）
+    var contentEl = document.getElementById('errorTabContent');
+    contentEl.querySelectorAll('[data-act="hide"]').forEach(function(btn) {
+        btn.onclick = function() { hideErrRow(hidKey, btn.dataset.hkey); };
+    });
+    contentEl.querySelectorAll('[data-act="restore"]').forEach(function(btn) {
+        btn.onclick = function() { localStorage.removeItem(hidKey); refreshView(); };
+    });
+
     // 恢复已保存的问题点解析和改善方向
-    var savedAnalysis = localStorage.getItem(noteKey + '_analysis');
-    var savedImprove = localStorage.getItem(noteKey + '_improve');
-    var taAnalysis = document.getElementById('errorAnalysisNote');
-    var taImprove = document.getElementById('errorImproveNote');
-    if (taAnalysis) {
-        if (savedAnalysis) taAnalysis.value = savedAnalysis;
-        taAnalysis.oninput = function() { localStorage.setItem(noteKey + '_analysis', this.value); };
-    }
-    if (taImprove) {
-        if (savedImprove) taImprove.value = savedImprove;
-        taImprove.oninput = function() { localStorage.setItem(noteKey + '_improve', this.value); };
-    }
+    ['errorAnalysisNote', 'errorImproveNote'].forEach(function(id) {
+        var ta = document.getElementById(id);
+        if (!ta) return;
+        var k = ta.dataset.noteKey;
+        var suffix = (id === 'errorAnalysisNote') ? '_analysis' : '_improve';
+        var saved = localStorage.getItem(k + suffix);
+        if (saved) ta.value = saved;
+        ta.oninput = function() { localStorage.setItem(k + suffix, this.value); };
+    });
 }
 
+// ===== 失误分析通用工具（2026-09-05）=====
+
+// 双周期对比汇总表：本周期 | 上一周期 | 环比（失误总数/失误类别数/涉及人员）；周月通用
+function buildPeriodCompare(src, curWd, prevWd, curTotal, prevTotal, curCats) {
+    function pc(wd) {
+        if (!wd || !wd.personStats) return 0;
+        return wd.personStats.filter(function(p) {
+            return src === '初审' ? p.errorsCS > 0 : (src === '抽检' ? p.errorsCJ > 0 : p.errorsQA > 0);
+        }).length;
+    }
+    function col(wd) {
+        if (!wd) return '--';
+        var lbl = periodLabelHtml(wd);
+        var rng = formatShortDate(wd.monday) + '~' + formatShortDate(wd.sunday);
+        return lbl + '<br><span style="font-weight:400;font-size:0.66rem;color:#5e6f8d;">' + rng + '</span>';
+    }
+    function fmtTrend(t) {
+        return t ? '<span class="' + t.cls + '">' + t.text + '</span>' : '<span class="text-muted">--</span>';
+    }
+    var prevCatStats = (prevWd && prevWd.categoryStats) ? (prevWd.categoryStats[src] || null) : null;
+    var t1 = computeTrend(curTotal, prevTotal);   // 失误总数（下降=绿=改善）
+    var t2 = prevCatStats === null ? null : computeTrend((curCats || []).length, prevCatStats.length);
+    var prevP = prevWd ? pc(prevWd) : null;
+    var t3 = prevP === null ? null : computeTrend(pc(curWd), prevP);
+    return '<table class="cmp-table"><thead><tr>' +
+        '<th>指标</th><th class="n">' + col(curWd) + '</th><th class="n">' + col(prevWd) + '</th><th class="n">环比</th>' +
+        '</tr></thead><tbody>' +
+        '<tr><td>失误总数</td><td class="n">' + curTotal + ' 条</td><td class="n">' + (prevWd ? prevTotal + ' 条' : '--') + '</td><td class="n">' + fmtTrend(t1) + '</td></tr>' +
+        '<tr><td>失误类别数</td><td class="n">' + (curCats || []).length + ' 个</td><td class="n">' + (prevCatStats === null ? '--' : prevCatStats.length + ' 个') + '</td><td class="n">' + fmtTrend(t2) + '</td></tr>' +
+        '<tr><td>涉及人员</td><td class="n">' + pc(curWd) + ' 人</td><td class="n">' + (prevP === null ? '--' : prevP + ' 人') + '</td><td class="n">' + fmtTrend(t3) + '</td></tr>' +
+        '</tbody></table>';
+}
+
+// ===== 周明细行手动隐藏（2026-09-05：全量展示 + 人工✕隐藏，localStorage 长期记住）=====
+// 行唯一标识：周期内 日期|人员|质检码|类别|品类
+function errRowKey(e) {
+    return [e.dateStr || formatDate(e.date), e.reviewer || '', e.qcCode || '', e.category || '', e.product || ''].join('|').toLowerCase();
+}
+function loadHiddenSet(hidKey) {
+    var set = {};
+    try { JSON.parse(localStorage.getItem(hidKey) || '[]').forEach(function(k) { set[k] = 1; }); } catch(e) {}
+    return set;
+}
+function hideErrRow(hidKey, hkey) {
+    var arr = [];
+    try { arr = JSON.parse(localStorage.getItem(hidKey) || '[]'); } catch(e) {}
+    if (arr.indexOf(hkey) < 0) arr.push(hkey);
+    try { localStorage.setItem(hidKey, JSON.stringify(arr)); } catch(e) {}
+    refreshView();
+}
+
+// ===== 月度失误分析（2026-09-06 整合版：三来源合一 + 顶部5张等宽卡联动过滤）=====
+// 顶部 5 卡：初审/抽检/QA（按来源）+ 明显失误/低级·投诉失误——后两类是失误单据「类别」中原有的值，
+// 跨来源单独统计口径（总数仍计入所属来源卡）。两张特殊卡的类别匹配规则在 MONTH_DIM_CARDS 的 isCat 里改即可。
+// 默认无选中 = 三来源合计（一套主体，不再分三段纵排）；点卡片下方主体只看该维度，再点一次返回合计。
+var MONTH_DIM_CARDS = [
+    { id: '初审', label: '初审失误', accent: '#27ae60' },
+    { id: '抽检', label: '抽检失误', accent: '#e67e22' },
+    { id: 'QA', label: 'QA失误', accent: '#2a5298' },
+    { id: '明显失误', label: '明显失误', accent: '#c0392b', isCat: function(c) { return (c || '').indexOf('明显') >= 0; } },
+    { id: '低级投诉', label: '低级/投诉失误', accent: '#b45309', isCat: function(c) { var s = c || ''; return s.indexOf('低级') >= 0 || s.indexOf('投诉') >= 0; } }
+];
+var monthErrDim = 'all';   // 'all'=三来源合计（默认）；其余=上方卡 id
+var _mCurWd = null, _mPrevWd = null;
+
+function monthDimCard(id) {
+    for (var i = 0; i < MONTH_DIM_CARDS.length; i++) {
+        if (MONTH_DIM_CARDS[i].id === id) return MONTH_DIM_CARDS[i];
+    }
+    return null;
+}
+
+// 维度失误行：周期窗口+站点过滤；来源卡=该来源、特殊卡=类别规则匹配、'all'=三来源全部
+function monthDimRows(dimId, wd) {
+    var out = [];
+    if (!wd || !wd.monday || !wd.sunday) return out;
+    (allErrors || []).forEach(function(er) {
+        if (!er || !er.date) return;
+        if (!isInWeek(er.date, wd.monday, wd.sunday) || !siteMatch(er, currentSite)) return;
+        if (dimId !== 'all') {
+            var dc = monthDimCard(dimId);
+            if (!dc) return;
+            if (dc.isCat) { if (!dc.isCat(er.category)) return; }
+            else if (er.source !== dimId) return;
+        }
+        out.push(er);
+    });
+    return out;
+}
+
+// 维度统计：{rows, total, cats(降序), persons(去重人数)}
+function monthDimStat(dimId, wd) {
+    var rows = monthDimRows(dimId, wd);
+    var map = {}, seen = {}, persons = 0;
+    rows.forEach(function(er) {
+        var c = er.category || '未分类';
+        map[c] = (map[c] || 0) + 1;
+        var n = fixPanZeName(er.reviewer);
+        if (n && !seen[n]) { seen[n] = 1; persons++; }
+    });
+    var cats = Object.keys(map).map(function(c) { return { name: c, count: map[c] }; }).sort(function(a, b) { return b.count - a.count; });
+    return { rows: rows, total: rows.length, cats: cats, persons: persons };
+}
+
+// 双周期汇总对比表（维度通用）：本月 | 上月 | 环比，列样式与周版对比表一致
+// - 'all'（三来源合计）：第一段按来源逐行列出 初审/抽检/QA + 合计行（失误条数），下面保留类别数/涉及人员两行合计口径
+// - 来源/特殊卡维度：指标行=失误总数/失误类别数/涉及人员
+function buildDimCompareTable(dimId, srcSeries, curWd, prevWd, curStat, prevStat) {
+    function col(wd) {
+        if (!wd) return '--';
+        var lbl = periodLabelHtml(wd);
+        var rng = formatShortDate(wd.monday) + '~' + formatShortDate(wd.sunday);
+        return lbl + '<br><span style="font-weight:400;font-size:0.66rem;color:#5e6f8d;">' + rng + '</span>';
+    }
+    function fmtTrend(t) {
+        return t ? '<span class="' + t.cls + '">' + t.text + '</span>' : '<span class="text-muted">--</span>';
+    }
+    function cellTrend(cv, pv) {
+        return (pv !== null && pv !== undefined) ? fmtTrend(computeTrend(cv, pv)) : '<span class="text-muted">--</span>';
+    }
+    // 转置结构（2026-09-06 用户改）：行=本周期/上一周期/环比；列=指标（表头横向）
+    // 'all'（三来源合计）：列=初审/抽检/QA（带来源色点）+ 灰底三来源合计列 + 失误类别数/涉及人员两列
+    // 来源/特殊卡维度：列=失误总数/失误类别数/涉及人员
+    function dot(accent) {
+        return '<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + accent + ';margin-right:6px;"></i>';
+    }
+    function cellVal(v, unit) {
+        return (v !== null && v !== undefined) ? v + ' ' + unit : '<span class="text-muted">--</span>';
+    }
+    var cols = [];
+    if (dimId === 'all' && srcSeries && srcSeries.length > 0) {
+        srcSeries.forEach(function(sr) {
+            cols.push({ name: dot(sr.accent) + sr.label + '失误', unit: '条', cur: sr.cur, prev: sr.prev });
+        });
+        cols.push({ name: '三来源合计', unit: '条', cur: curStat.total, prev: prevStat ? prevStat.total : null });
+        cols.push({ name: '失误类别数', unit: '个', cur: curStat.cats.length, prev: prevStat ? prevStat.cats.length : null });
+        cols.push({ name: '涉及人员', unit: '人', cur: curStat.persons, prev: prevStat ? prevStat.persons : null });
+    } else {
+        cols.push({ name: '失误总数', unit: '条', cur: curStat.total, prev: prevStat ? prevStat.total : null });
+        cols.push({ name: '失误类别数', unit: '个', cur: curStat.cats.length, prev: prevStat ? prevStat.cats.length : null });
+        cols.push({ name: '涉及人员', unit: '人', cur: curStat.persons, prev: prevStat ? prevStat.persons : null });
+    }
+    var thead = '<tr><th>周期</th>';
+    cols.forEach(function(c) {
+        thead += '<th>' + c.name + '</th>';
+    });
+    thead += '</tr>';
+    function row(leadHtml, getVal) {
+        var r = '<tr><td>' + leadHtml + '</td>';
+        cols.forEach(function(c) {
+            r += '<td class="n">' + getVal(c) + '</td>';
+        });
+        return r + '</tr>';
+    }
+    var rowsHtml =
+        row(col(curWd), function(c) { return cellVal(c.cur, c.unit); }) +
+        row(prevWd ? col(prevWd) : '<span style="font-weight:400;color:#94a3b8;">上一周期</span>', function(c) { return cellVal(c.prev, c.unit); }) +
+        row('环比', function(c) { return cellTrend(c.cur, c.prev); });
+    return '<table class="cmp-table cmp-trans"><thead>' + thead + '</thead><tbody>' + rowsHtml + '</tbody></table>';
+}
+
+// 失误类别排比卡（全类别，含较上月 ↑↓/新增/持平）——维度通用
+function buildTopListCard(curStat, prevStat) {
+    var prevMap = {};
+    if (prevStat) prevStat.cats.forEach(function(c) { prevMap[c.name] = c.count; });
+    var curTotal = curStat.total;
+    var html = '<div class="error-toplist"><div class="et-title" style="text-align:center;">📈 失误类别排比（全类别 · 较上月）</div>';
+    if (curStat.cats.length === 0) {
+        html += '<div class="text-muted text-sm">本月无失误记录</div>';
+    } else {
+        curStat.cats.forEach(function(c, i) {
+            var pct = curTotal > 0 ? (c.count / curTotal * 100).toFixed(2) : 0;
+            var barW = curTotal > 0 ? (c.count / curTotal * 100).toFixed(0) : 0;
+            var prevCount = prevMap[c.name] || 0;
+            var deltaStr = '';
+            if (prevStat) {
+                if (prevCount > 0 && c.count !== prevCount) {
+                    var d = c.count - prevCount;
+                    deltaStr = ' <span style="font-size:0.7rem;' + (d > 0 ? 'color:#c0392b' : 'color:#27ae60') + '">' + (d > 0 ? '↑' : '↓') + Math.abs(d) + '</span>';
+                } else if (prevCount === 0 && c.count > 0) {
+                    deltaStr = ' <span style="font-size:0.7rem;color:#c0392b;">新增</span>';
+                } else if (prevCount > 0 && c.count === prevCount) {
+                    deltaStr = ' <span style="font-size:0.7rem;color:#5e6f8d;">→持平</span>';
+                }
+            }
+            html += '<div class="et-item">' +
+                '<span class="et-rank">' + (i + 1) + '</span>' +
+                '<span class="et-cat" title="' + c.name + '">' + c.name + '</span>' +
+                '<div class="et-bar-wrap"><div class="et-bar ' + (i < 5 ? 'cat-' + i : 'et-bar-other') + '" style="width:' + Math.max(barW, 2) + '%"></div></div>' +
+                '<span class="et-count">' + c.count + ' (' + pct + '%)</span>' +
+                '<span class="et-trend">' + deltaStr + '</span>' +
+                '</div>';
+        });
+    }
+    return html + '</div>';
+}
+
+// 月内周度失误走势卡（右侧，按类别矩阵）——入参已是当前维度的当月行/类别序
+// 以自然周分桶（跨月边界的首/末周只统计落在本月窗口内的日期），格子底色越深条数越多、行内峰值描边
+function buildWeekTrendCard(rows, cats, wd, accent) {
+    // 颜色深浅：0.08(浅)~0.93(最深)，对应 v/gMax
+    function withAlpha(hex, a) {
+        var n = parseInt(hex.slice(1), 16);
+        return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a.toFixed(2) + ')';
+    }
+    var s = wd.monday, e = wd.sunday;
+    var DAY = 86400000;
+    var firstMon = new Date(s.getFullYear(), s.getMonth(), s.getDate() - ((s.getDay() + 6) % 7));
+    var weeks = [];
+    for (var t = new Date(firstMon.getTime()); t.getTime() <= e.getTime(); t = new Date(t.getTime() + 7 * DAY)) {
+        weeks.push({ start: new Date(t.getTime()), cats: {}, total: 0 });
+    }
+    (rows || []).forEach(function(er) {
+        if (!er || !er.date) return;
+        var wi = Math.floor((er.date.getTime() - firstMon.getTime()) / (7 * DAY));
+        if (wi < 0 || wi >= weeks.length) return;
+        var w = weeks[wi];
+        w.cats[er.category] = (w.cats[er.category] || 0) + 1;
+        w.total++;
+    });
+    if (weeks.length === 0) return '';
+
+    var gMax = 0, peakW = 0;
+    weeks.forEach(function(w, wi) {
+        if (w.total > weeks[peakW].total) peakW = wi;
+        Object.keys(w.cats).forEach(function(c) { if (w.cats[c] > gMax) gMax = w.cats[c]; });
+    });
+
+    var gtc = 'grid-template-columns:92px repeat(' + weeks.length + ',1fr);';
+    var html = '<div class="error-weektrend">' +
+        '<div class="ewt-title" style="text-align:center;">📅 月内周度失误走势（按类别）</div>';
+
+    // 表头：第N周 + 该周周一日期
+    html += '<div class="ewt-grid" style="' + gtc + '"><div class="ewt-h">类别</div>';
+    weeks.forEach(function(w, wi) {
+        var end = new Date(w.start.getTime() + 6 * DAY);
+        html += '<div class="ewt-h" title="' + formatDate(w.start) + ' ~ ' + formatDate(end) + '">' +
+            '<div>第' + (wi + 1) + '周</div><div class="ewt-date">' + formatShortDate(w.start) + '起</div></div>';
+    });
+    html += '</div>';
+
+    if (!cats || cats.length === 0) {
+        html += '<div class="text-muted text-sm" style="padding:8px 0;">本月无失误记录</div>';
+    } else {
+        // 每行=一个类别（与左侧排比卡同序），格子=该类别当周条数；底色越深条数越多；行内峰值描边
+        cats.forEach(function(c) {
+            var rowMax = 0;
+            weeks.forEach(function(w) { var v = w.cats[c.name] || 0; if (v > rowMax) rowMax = v; });
+            html += '<div class="ewt-grid" style="' + gtc + '">' +
+                '<div class="ewt-name" title="' + c.name + '">' + c.name + '</div>';
+            weeks.forEach(function(w) {
+                var v = w.cats[c.name] || 0;
+                var a = gMax > 0 ? (v / gMax * 0.85 + 0.08) : 0;
+                var bg = v > 0 ? withAlpha(accent, a) : 'transparent';
+                var col = v > 0 ? (a >= 0.55 ? '#fff' : '#1e293b') : '#cbd5e1';
+                var peak = (v > 0 && rowMax > 1 && v === rowMax) ? 'outline:1px solid rgba(0,0,0,0.35);outline-offset:-1px;' : '';
+                html += '<div class="ewt-cell" style="background:' + bg + ';color:' + col + ';' + peak + '">' + v + '</div>';
+            });
+            html += '</div>';
+        });
+    }
+
+    // 口径说明行
+    var notes = ['窗口 ' + formatShortDate(s) + ' ~ ' + formatShortDate(e)];
+    if (s.getDay() !== 1) notes.push('首周从' + formatShortDate(firstMon) + '起为部分周，只统计本月内日期');
+    if (e.getDay() !== 0) {
+        if (e.getTime() > Date.now()) notes.push('本月尚未结束，末周为进行中数据');
+        else notes.push('末周为部分周，只统计本月内日期');
+    }
+    if (gMax > 1) notes.push('格子颜色越深 = 当周该类条数越多');
+    if (weeks[peakW].total > 0) notes.push('全月峰值：第' + (peakW + 1) + '周（' + formatShortDate(weeks[peakW].start) + '起 · 共' + weeks[peakW].total + '条）');
+    html += '<div class="ewt-note">' + notes.join(' · ') + '</div>';
+    return html + '</div>';
+}
+
+function renderErrorMonthly(curWd, prevWd) {
+    _mCurWd = curWd;
+    _mPrevWd = prevWd;
+    if (monthErrDim !== 'all' && !monthDimCard(monthErrDim)) monthErrDim = 'all';
+    if (!curWd) return;
+
+    // 预计算各卡本月/上月统计（含合计），一次循环多用
+    var curStatAll = monthDimStat('all', curWd);
+    var prevStatAll = prevWd ? monthDimStat('all', prevWd) : null;
+    var stats = {};
+    MONTH_DIM_CARDS.forEach(function(dc) {
+        stats[dc.id] = monthDimStat(dc.id, curWd);
+        if (prevWd) stats[dc.id + '_prev'] = monthDimStat(dc.id, prevWd);
+    });
+
+    var html = '';
+    // —— 顶部 5 张等宽卡（本月数 + 上月/环比小字；点击=只看该维度）——
+    html += '<div class="dim5-cards">';
+    MONTH_DIM_CARDS.forEach(function(dc) {
+        var cur = stats[dc.id];
+        var prev = prevWd ? stats[dc.id + '_prev'] : null;
+        var sel = monthErrDim === dc.id;
+        var ttTxt = '';
+        if (prev && prev.total > 0) {
+            var tt = computeTrend(cur.total, prev.total);
+            if (tt.text !== '--') ttTxt = '<span class="' + tt.cls + '">' + tt.text + '</span>';
+        }
+        html += '<div class="dim5-card' + (sel ? ' dim5-sel' : '') + '" data-dim="' + dc.id + '" title="点击只看「' + dc.label + '」；再点一次返回三来源合计">' +
+            '<div class="d5-label"><i style="background:' + dc.accent + '"></i>' + dc.label + '</div>' +
+            '<div class="d5-num" style="color:' + dc.accent + '">' + cur.total + '</div>' +
+            '<div class="d5-sub">上月 ' + (prev ? prev.total : '--') + ' 条' + (ttTxt ? ' · ' + ttTxt : '') + '</div>' +
+            '</div>';
+    });
+    html += '</div>';
+
+    // —— 当前维度主体（一套：汇总对比 + 类别排比｜周度走势 + 备注；默认=三来源合计）——
+    var dc = monthErrDim === 'all' ? null : monthDimCard(monthErrDim);
+    var dimLabel = dc ? dc.label : '三来源合计';
+    var curStat = dc ? stats[dc.id] : curStatAll;
+    var prevStat = dc ? (prevWd ? stats[dc.id + '_prev'] : null) : prevStatAll;
+    var accent = dc ? dc.accent : '#2a5298';
+
+    html += '<div class="dim-hint">' + (dc ? '当前仅看「' + dc.label + '」' : '默认口径：三来源合并统计（整合视图）') + ' · 点上方卡片切换维度，再点一次当前卡返回合计</div>';
+
+    // 合计口径下对比表按来源逐行列出（初审/抽检/QA + 合计）
+    var srcSeries = [];
+    if (monthErrDim === 'all') {
+        MONTH_DIM_CARDS.forEach(function(sc) {
+            if (sc.isCat) return;
+            var pstat = prevWd ? stats[sc.id + '_prev'] : null;
+            srcSeries.push({ label: sc.id, accent: sc.accent, cur: stats[sc.id].total, prev: pstat ? pstat.total : null });
+        });
+    }
+    html += '<div class="error-summary" style="margin-top:4px;"><div class="es-title" style="text-align:center;">📊 汇总对比（' + dimLabel + '）</div>' +
+        buildDimCompareTable(monthErrDim, srcSeries, curWd, prevWd, curStat, prevStat) + '</div>';
+
+    html += '<div class="m-flex2">' +
+        buildTopListCard(curStat, prevStat) +
+        buildWeekTrendCard(curStat.rows, curStat.cats, curWd, accent) +
+        '</div>';
+
+    // —— 问题点解析 + 改善方向（随维度分 key 存储；m_ 前缀与周视图隔离；来源维度的 key 与旧版月度一致）——
+    var noteKey = 'qc_note_m_' + currentSite + '_' + (dc ? dc.id : '合计') + '_' + formatDate(curWd.monday);
+    html += '<div style="display:flex;gap:10px;margin-top:12px;">' +
+        '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">🔎 问题点解析</div>' +
+        '<textarea id="errorAnalysisNoteM" data-note-key="' + noteKey + '" placeholder="记录本月' + (dc ? '「' + dc.label + '」' : '') + '失误的问题点分析…" style="width:100%;height:88px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">💡 改善方向</div>' +
+        '<textarea id="errorImproveNoteM" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:88px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '</div>';
+
+    document.getElementById('errorTabContent').innerHTML = html;
+
+    // 5 卡点击：单选联动；点当前卡返回合计
+    var contentEl = document.getElementById('errorTabContent');
+    contentEl.querySelectorAll('.dim5-card').forEach(function(card) {
+        card.onclick = function() {
+            var d = card.dataset.dim;
+            monthErrDim = (monthErrDim === d) ? 'all' : d;
+            renderErrorMonthly(_mCurWd, _mPrevWd);
+        };
+    });
+
+    // 恢复已保存的问题点解析和改善方向
+    ['errorAnalysisNoteM', 'errorImproveNoteM'].forEach(function(id) {
+        var ta = document.getElementById(id);
+        if (!ta) return;
+        var k = ta.dataset.noteKey;
+        var suffix = (id === 'errorAnalysisNoteM') ? '_analysis' : '_improve';
+        var saved = localStorage.getItem(k + suffix);
+        if (saved) ta.value = saved;
+        ta.oninput = function() { localStorage.setItem(k + suffix, this.value); };
+    });
+}
 
 // 截图功能
 
@@ -1817,13 +2341,13 @@ function updateErrorTabs(weekData) {
 function showTotalTrendPopup() {
     var allWeeks = window._allWeeksCache || [];
     if (allWeeks.length < 2) return;
-    var sel = currentWeekIndex;
-    var selLabel = allWeeks[sel] ? getWeekLabel(allWeeks[sel].monday) : "";
+    var sel = getCurIndex();
+    var selLabel = allWeeks[sel] ? periodLabelHtml(allWeeks[sel]) : "";
 
-    // 收集近4周汇总数据（从旧到新）
+    // 收集近N周期汇总数据（从旧到新；周=4、月=2）
     var rows = "";
     var popWeeks = [];
-    for (var pw = Math.min(sel + 3, allWeeks.length - 1); pw >= sel; pw--) {
+    for (var pw = Math.min(sel + periodDepth() - 1, allWeeks.length - 1); pw >= sel; pw--) {
         if (pw < allWeeks.length && allWeeks[pw]) popWeeks.push(allWeeks[pw]);
     }
     // popWeeks 是从旧到新
@@ -1836,7 +2360,7 @@ function showTotalTrendPopup() {
         }
         var tCov = tPanZe > 0 ? (tSampling / tPanZe * 100) : 0;
         var tAcc = tPanZe > 0 ? Math.max(0, (tPanZe - tTotalErrs) / tPanZe * 100) : null;
-        var label = getWeekLabel(wd.monday);
+        var label = periodLabelHtml(wd);
         var bg = isSel ? "background:#f1f5f9;" : "";
         rows += "<tr style=\"" + bg + "\">" +
             "<td>" + (isSel ? "📌 " : "📅 ") + label + "</td>" +
@@ -1879,6 +2403,13 @@ function screenshotSection(elementId, label) {
         ta.style.display = 'none';
         swaps.push({ textarea: ta, pre: pre });
     });
+    // 明细行「✕」隐藏按钮列不出现在截图中（2026-09-05）
+    var hideCols = el.querySelectorAll('.shot-hide-col');
+    hideCols.forEach(function(td) { td.style.display = 'none'; });
+    var restoreShots = function() {
+        swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
+        hideCols.forEach(function(td) { td.style.display = ''; });
+    };
 
     html2canvas(el, {
         backgroundColor: "#f5f7fa",
@@ -1886,8 +2417,8 @@ function screenshotSection(elementId, label) {
         useCORS: true,
         logging: false
     }).then(function(canvas) {
-        // 恢复 textarea
-        swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
+        // 恢复 textarea / 隐藏列
+        restoreShots();
         var link = document.createElement("a");
         var now = new Date();
         var ts = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0") + "_" + String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0");
@@ -1895,18 +2426,21 @@ function screenshotSection(elementId, label) {
         link.href = canvas.toDataURL("image/png");
         link.click();
     }).catch(function(err) {
-        // 恢复 textarea
-        swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
+        // 恢复 textarea / 隐藏列
+        restoreShots();
         console.error("截图失败:", err);
         alert("截图失败: " + err.message);
     });
 }
 
-// ==================== 7b. 周报文本自动生成 ====================
+// ==================== 7b. 周报/月报文本自动生成 ====================
 function generateReportText(weekData, allWeeks) {
-    var prevWeekData = (currentWeekIndex + 1 < allWeeks.length) ? allWeeks[currentWeekIndex + 1] : null;
+    var prevWeekData = (getCurIndex() + 1 < allWeeks.length) ? allWeeks[getCurIndex() + 1] : null;
+    // 环比措辞：周=上周、月=上月（viewUnit=周时两变量即原文案，输出逐字不变）
+    var uwPrev = viewUnit === 'month' ? '上月' : '上周';
+    var isMonth = viewUnit === 'month';
     var lines = [];
-    lines.push('核心指标');
+    lines.push(isMonth ? '核心指标（' + monthLabelOf(weekData.monday) + '）' : '核心指标');
 
     // 抽检量（括号内：选定站点、当前周期的全部抽检人按出现次数计数，即线上+实物表G列）
     var personSamplingCount = {};
@@ -1923,21 +2457,27 @@ function generateReportText(weekData, allWeeks) {
     var samplingDiff = '';
     if (prevWeekData) {
         var ds = weekData.totalSampling - prevWeekData.totalSampling;
-        if (ds > 0) samplingDiff = ' 较上周上升' + ds + '台';
-        else if (ds < 0) samplingDiff = ' 较上周下降' + (-ds) + '台';
-        else samplingDiff = ' 与上周持平';
+        if (ds > 0) samplingDiff = ' 较' + uwPrev + '上升' + ds + '台';
+        else if (ds < 0) samplingDiff = ' 较' + uwPrev + '下降' + (-ds) + '台';
+        else samplingDiff = ' 与' + uwPrev + '持平';
     }
     lines.push('1、抽检量：' + weekData.totalSampling + topStr + samplingDiff);
     lines.push('  线上：' + weekData.onlineCount + '  实物：' + weekData.physicalCount);
-    lines.push('  抽检人效：' + weekData.totalSampling + '/7≈' + Math.round(weekData.totalSampling / 7));
+    // 人效口径：周=抽检量/7；月=抽检量/当月有效抽检天数（与KPI表一致）
+    if (viewUnit === 'month') {
+        var actDays = Math.max(1, weekData.activeDays || 1);
+        lines.push('  日均人效：有效抽检' + weekData.activeDays + '天，日均≈' + Math.round(weekData.totalSampling / actDays) + '台');
+    } else {
+        lines.push('  抽检人效：' + weekData.totalSampling + '/7≈' + Math.round(weekData.totalSampling / 7));
+    }
 
     // 判责量
     var jzDiff = '';
     if (prevWeekData) {
         var dj = weekData.judgmentCount - prevWeekData.judgmentCount;
-        if (dj > 0) jzDiff = '，较上周上升' + dj + '台';
-        else if (dj < 0) jzDiff = '，较上周下降' + (-dj) + '台';
-        else jzDiff = '，与上周持平';
+        if (dj > 0) jzDiff = '，较' + uwPrev + '上升' + dj + '台';
+        else if (dj < 0) jzDiff = '，较' + uwPrev + '下降' + (-dj) + '台';
+        else jzDiff = '，与' + uwPrev + '持平';
     }
     lines.push('2、判责量：' + weekData.judgmentCount + jzDiff);
 
@@ -1945,9 +2485,9 @@ function generateReportText(weekData, allWeeks) {
     var covDiff = '';
     if (prevWeekData) {
         var dc = weekData.coverage - prevWeekData.coverage;
-        if (dc > 0) covDiff = '，较上周提升' + dc.toFixed(2) + '%';
-        else if (dc < 0) covDiff = '，较上周下降' + (-dc).toFixed(2) + '%';
-        else covDiff = '，与上周持平';
+        if (dc > 0) covDiff = '，较' + uwPrev + '提升' + dc.toFixed(2) + '%';
+        else if (dc < 0) covDiff = '，较' + uwPrev + '下降' + (-dc).toFixed(2) + '%';
+        else covDiff = '，与' + uwPrev + '持平';
     }
     lines.push('3、抽检覆盖率：' + weekData.coverage.toFixed(2) + '%' + covDiff);
 
@@ -1955,13 +2495,13 @@ function generateReportText(weekData, allWeeks) {
     var accDiff = '';
     if (prevWeekData) {
         var da = weekData.accuracy - prevWeekData.accuracy;
-        if (da > 0) accDiff = '，较上周提升' + da.toFixed(2) + '%';
-        else if (da < 0) accDiff = '，较上周下降' + (-da).toFixed(2) + '%';
-        else accDiff = '，与上周持平';
+        if (da > 0) accDiff = '，较' + uwPrev + '提升' + da.toFixed(2) + '%';
+        else if (da < 0) accDiff = '，较' + uwPrev + '下降' + (-da).toFixed(2) + '%';
+        else accDiff = '，与' + uwPrev + '持平';
     }
     lines.push('4、抽检准确率：' + weekData.accuracy.toFixed(2) + '%' + accDiff);
 
-    // 前三周环比（只看本周vs上周的抽检量）
+    // 环比小结：周=前三周环比（只看选中周vs上周的抽检量）；月=本月vs上月趋势小结（月度汇报风格）
     var trendTxt = '数据不足';
     if (prevWeekData) {
         var dt = weekData.totalSampling - prevWeekData.totalSampling;
@@ -1969,7 +2509,15 @@ function generateReportText(weekData, allWeeks) {
         else if (dt > 0) trendTxt = '呈上升趋势';
         else trendTxt = '整体平稳';
     }
-    lines.push('5、前三周环比：' + trendTxt);
+    if (viewUnit === 'month') {
+        var prevLbl = getPeriodLabel(prevWeekData || weekData);
+        var curLbl = getPeriodLabel(weekData);
+        var base = (trendTxt === '数据不足') ? '数据不足'
+            : '较上月抽检量' + trendTxt + '（' + prevLbl + '：' + (prevWeekData ? prevWeekData.totalSampling : 0) + '台 → ' + curLbl + '：' + weekData.totalSampling + '台）';
+        lines.push('5、趋势小结：' + base);
+    } else {
+        lines.push('5、前三周环比：' + trendTxt);
+    }
 
     return lines.join('\n');
 }
@@ -2003,8 +2551,8 @@ function copyReportText() {
 }
 
 function renderAll(weekData, allWeeks) {
-    // 环比对比：选中周的上一周（而非总是本周的"上周"）
-    var prevWeekData = (currentWeekIndex + 1 < allWeeks.length) ? allWeeks[currentWeekIndex + 1] : null;
+    // 环比对比：选中周期的上一周期（而非总是本周/本月的"上周/上月"）
+    var prevWeekData = (getCurIndex() + 1 < allWeeks.length) ? allWeeks[getCurIndex() + 1] : null;
     renderKpiTable(weekData, allWeeks);
     updateReportText(weekData, allWeeks);
     renderPersonTable(weekData, allWeeks);
@@ -2016,19 +2564,92 @@ function renderAll(weekData, allWeeks) {
 }
 
 // ==================== 9. 交互 ====================
-function switchWeek(index) {
-    if (index < 0 || index >= weekOptions.length) return;
-    currentWeekIndex = index;
-    document.getElementById('weekSelect').value = index;
-    document.getElementById('btnPrevWeek').disabled = (index >= weekOptions.length - 1);
-    document.getElementById('btnNextWeek').disabled = (index <= 0);
+// ===== 周期维度 UI（周/月共用，2026-09-05）=====
+// 某周期数据是否不完整：月模式下内存窗口起点晚于上月27日 → 上月列仅部分数据（首帧灰色「(部分)」角标）
+function isPartialPeriod(wd) {
+    if (!wd || viewUnit !== 'month' || !monthOptions[1]) return false;
+    return wd.monday.getTime() === monthOptions[1].monday.getTime() &&
+        !(_windowStartDate && _windowStartDate <= monthOptions[1].monday);
+}
+
+// 周期标签 + 部分数据灰标（表头用）
+function periodLabelHtml(wd) {
+    var t = getPeriodLabel(wd);
+    if (isPartialPeriod(wd)) t += ' <span style="font-size:0.68rem;color:#b0b8c0;font-weight:400;">(部分)</span>';
+    return t;
+}
+
+// 截图下载文件名的报告区标签：周报文本 / 月报文本
+function getReportSecLabel() { return viewUnit === 'month' ? '月报文本' : '周报文本'; }
+
+// 切换当前周期（◀/▶/下拉共用；周、月各自记自己的位置）
+function switchPeriod(index) {
+    if (viewUnit === 'month') {
+        if (index < 0 || index >= monthOptions.length) return;
+        currentMonthIndex = index;
+    } else {
+        if (index < 0 || index >= weekOptions.length) return;
+        currentWeekIndex = index;
+    }
+    populatePeriodSelect();
     refreshView();
+}
+
+// 填充周期下拉选项 + ◀▶ 按钮态 + 维度文案（首次加载/切换周期/刷新共用）
+function populatePeriodSelect() {
+    var opts = getPeriodOptions();
+    var sel = document.getElementById('weekSelect');
+    sel.innerHTML = '';
+    opts.forEach(function(o) {
+        var opt = document.createElement('option');
+        opt.value = String(sel.options.length);
+        opt.textContent = o.label;
+        sel.appendChild(opt);
+    });
+    var cur = Math.min(getCurIndex(), opts.length - 1);
+    sel.value = String(cur);
+    document.getElementById('btnPrevWeek').disabled = (cur >= opts.length - 1);
+    document.getElementById('btnNextWeek').disabled = (cur <= 0);
+    applyUnitChrome();
+}
+
+// 周/月维度界面文案联动（按钮title/报告区标题/人效趋势列标题/失误分析结构）
+function applyUnitChrome() {
+    var isMonth = viewUnit === 'month';
+    document.getElementById('btnPrevWeek').title = isMonth ? '上一月' : '上一周';
+    document.getElementById('btnNextWeek').title = isMonth ? '下一月' : '下一周';
+    document.getElementById('reportTitleText').textContent = isMonth ? '📝 月报文本（自动生成）' : '📝 周报文本（自动生成）';
+    document.getElementById('reportHint').textContent = isMonth
+        ? '随月份/站点筛选自动更新，点击「复制」即可粘贴到月报'
+        : '随周次/站点筛选自动更新，点击「复制」即可粘贴到周报';
+    document.getElementById('btnCopyReport').title = isMonth ? '复制月报文本' : '复制周报文本';
+    var shotReport = document.getElementById('btnShotReport');
+    if (shotReport) shotReport.title = isMonth ? '截图月报文本' : '截图周报文本';
+    document.getElementById('personTrendTh').textContent = isMonth ? '周期趋势' : '四周趋势';
+    // 失误分析：周=三来源互斥Tab；月=三来源纵排整块（隐藏Tab与合计徽章，见 renderErrorAnalysis）
+    document.getElementById('errorTabs').style.display = isMonth ? 'none' : '';
+    document.getElementById('errorTotalBadge').style.display = isMonth ? 'none' : '';
+}
+
+// 周 ↔ 月维度切换（月模式首次进入时数据不足 → 顶部轻提示 + 后台补拉）
+function switchUnit(unit) {
+    if (unit === viewUnit) return;
+    viewUnit = unit;
+    document.querySelectorAll('#unitSwitch .unit-switch-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.unit === unit);
+    });
+    var monthNeeded = buildMonthOptions()[1]; // 上月逻辑月起点（如 7/27）
+    var needBackfill = (unit === 'month' && !(_windowStartDate && _windowStartDate <= monthNeeded.monday));
+    populatePeriodSelect();
+    refreshView();
+    if (needBackfill) ensureMonthData();  // 先渲染首帧（本月完整、上月(部分)），拉完自动重渲染
 }
 
 function refreshView() {
     if (!dataReady) return;
-    var weeks = computeAllWeeks(allErrors, samplingData, panZeRecords, weekOptions, currentSite);
-    var weekData = weeks[currentWeekIndex];
+    var periods = getPeriodOptions();
+    var weeks = computeAllWeeks(allErrors, samplingData, panZeRecords, periods, currentSite);
+    var weekData = weeks[getCurIndex()];
     renderAll(weekData, weeks);
     updateErrorTabs(weekData);
     // 更新站点筛选按钮激活态
@@ -2044,9 +2665,10 @@ function refreshView() {
 }
 
 function showPersonDetail(name) {
-    var weekWeeks = computeAllWeeks(allErrors, samplingData, panZeRecords, weekOptions, currentSite);
-    var weekData = weekWeeks[currentWeekIndex];
-    if (!weekData || !weekData.personStats) return;  // 周数据缺失时静默返回，防止点击无弹窗
+    var weekWeeks = computeAllWeeks(allErrors, samplingData, panZeRecords, getPeriodOptions(), currentSite);
+    var weekData = weekWeeks[getCurIndex()];
+    if (!weekData || !weekData.personStats) return;  // 周期数据缺失时静默返回，防止点击无弹窗
+    var uw = unitWords(getCurIndex());
     var person = null;
     weekData.personStats.forEach(function(p) { if (p.name === name) person = p; });
     if (!person) return;
@@ -2071,7 +2693,7 @@ function showPersonDetail(name) {
         '</div>';
 
     if (personErrors.length > 0) {
-        html += '<div style="font-weight:600;margin-bottom:8px;color:#1f3a6b;">📋 本周失误明细（' + personErrors.length + '条）</div>' +
+        html += '<div style="font-weight:600;margin-bottom:8px;color:#1f3a6b;">📋 ' + uw.cur + '失误明细（' + personErrors.length + '条）</div>' +
             '<div class="table-wrap"><table class="data-table"><thead><tr>' +
             '<th>日期</th><th>来源</th><th>类别</th><th>备注</th><th>质检码</th>' +
             '</tr></thead><tbody>';
@@ -2087,19 +2709,20 @@ function showPersonDetail(name) {
         });
         html += '</tbody></table></div>';
     } else {
-        html += '<div class="text-muted text-sm" style="text-align:center;padding:20px;">本周无失误记录 ✅</div>';
+        html += '<div class="text-muted text-sm" style="text-align:center;padding:20px;">' + uw.cur + '无失误记录 ✅</div>';
     }
 
-    // 最近3周数据对比（以选定周为基准：选定周+往前3周）
+    // 最近周期数据对比（以选定周期为基准往前取，周=4 / 月=2）
     var allWeeks = window._allWeeksCache || [];
     var weekHistory = [];
-    for (var wi2 = 0; wi2 < Math.min(allWeeks.length - currentWeekIndex, 4); wi2++) {
-        var wd2 = allWeeks[currentWeekIndex + wi2];
+    var histDepth = periodDepth();
+    for (var wi2 = 0; wi2 < Math.min(allWeeks.length - getCurIndex(), histDepth); wi2++) {
+        var wd2 = allWeeks[getCurIndex() + wi2];
         if (!wd2 || !wd2.personStats) continue;
         var wp = null;
         wd2.personStats.forEach(function(ps) { if (ps.name === name) wp = ps; });
         weekHistory.push({
-            label: getWeekLabel(wd2.monday),
+            label: periodLabelHtml(wd2),
             sampling: wp ? wp.sampling : 0,
             panZe: wp ? (wp.panZe || 0) : 0,
             errors: wp ? wp.errors : 0,
@@ -2109,7 +2732,7 @@ function showPersonDetail(name) {
     }
     if (weekHistory.length > 1) {
         html += '<div style="margin-top:16px;">' +
-            '<div style="font-weight:600;margin-bottom:10px;color:#1f3a6b;">📈 最近3周趋势</div>' +
+            '<div style="font-weight:600;margin-bottom:10px;color:#1f3a6b;">📈 ' + (viewUnit === 'month' ? '最近' + (weekHistory.length) + '个周期趋势' : '最近3周趋势') + '</div>' +
             '<div class="table-wrap"><table class="data-table"><thead><tr>' +
             '<th>周期</th><th>抽检量</th><th>判责量</th><th>失误</th><th>覆盖率</th><th>判责准确率</th>' +
             '</tr></thead><tbody>';
@@ -2138,10 +2761,14 @@ function showPersonDetail(name) {
 }
 
 function setupEventListeners() {
-    // 周切换
-    document.getElementById('btnPrevWeek').onclick = function() { switchWeek(currentWeekIndex + 1); };
-    document.getElementById('btnNextWeek').onclick = function() { switchWeek(currentWeekIndex - 1); };
-    document.getElementById('weekSelect').onchange = function() { switchWeek(parseInt(this.value)); };
+    // 周/月维度切换
+    document.querySelectorAll('#unitSwitch .unit-switch-btn').forEach(function(btn) {
+        btn.onclick = function() { switchUnit(this.dataset.unit); };
+    });
+    // 周期切换（◀ = 更早一周期，▶ = 更新一周期）
+    document.getElementById('btnPrevWeek').onclick = function() { switchPeriod(getCurIndex() + 1); };
+    document.getElementById('btnNextWeek').onclick = function() { switchPeriod(getCurIndex() - 1); };
+    document.getElementById('weekSelect').onchange = function() { switchPeriod(parseInt(this.value)); };
 
     // 站点筛选
     document.querySelectorAll('#siteFilter .site-filter-btn').forEach(function(btn) {
@@ -2154,8 +2781,16 @@ function setupEventListeners() {
     // 复制周报文本
     document.getElementById('btnCopyReport').onclick = copyReportText;
 
-    // 刷新
+    // 刷新：回到初始状态（周视图、本周，按当前窗口重拉5周数据）
     document.getElementById('btnRefresh').onclick = async function() {
+        if (viewUnit !== 'week' || currentWeekIndex !== 0 || currentMonthIndex !== 0) {
+            viewUnit = 'week';
+            currentWeekIndex = 0;
+            currentMonthIndex = 0;
+            document.querySelectorAll('#unitSwitch .unit-switch-btn').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.unit === 'week');
+            });
+        }
         document.getElementById('loadingArea').style.display = '';
         document.getElementById('personSection').style.display = 'none';
         document.getElementById('errorSection').style.display = 'none';
@@ -2190,45 +2825,92 @@ function setupEventListeners() {
 
 // ==================== 10. 初始化 ====================
 async function initData(silent) {
-    if (!silent) {
-        document.getElementById('loadingArea').style.display = '';
-        document.getElementById('bannerArea').innerHTML = '';
-        document.getElementById('personSection').style.display = 'none';
-        document.getElementById('errorSection').style.display = 'none';
-    }
-
-    var token = await acquireToken();
-    if (!token) {
-        document.getElementById('loadingArea').style.display = 'none';
-        showAuthUI();
-        return;
-    }
-
-    try {
-        // 第一批：最近2周（行数减半），先渲染让界面尽快显示
-        var results1 = await fetchAllData(token, 'first2');
-        applyLoadedData(results1);
-
-        // 第二批：第3~5周，后台补充完成后自动刷新界面
-        if (!silent) {
-            document.getElementById('bannerArea').innerHTML =
-                '<div class="info-banner">⏳ 已加载最近两周，正在后台加载第3~5周…</div>';
-        }
-        try {
-            var results2 = await fetchAllData(token, 'rest2');
-            var merged = mergePhaseResults(results1, results2);
-            applyLoadedData(merged);
-        } catch(e) {
-            console.warn('[二批] 第3~5周加载失败，保持最近2周数据:', e.message);
-            if (!silent) {
-                document.getElementById('bannerArea').innerHTML = '';
+    // 竞态防护（2026-09-05）：双批加载中收到维度补拉请求 → 收尾后自动重跑（_pendingUnitReload）
+    if (_initRunning) { _pendingUnitReload = true; return; }
+    _initRunning = true;
+    var finish = function() {
+        _initRunning = false;
+        if (_pendingUnitReload) {
+            _pendingUnitReload = false;
+            // 补拉请求在加载期间到达：收尾后若仍是月视图且覆盖不足 → 走 ensureMonthData 完整流程（提示→拉取→✅）
+            var mo = buildMonthOptions();
+            if (viewUnit === 'month' && !(_windowStartDate && _windowStartDate <= mo[1].monday)) {
+                setTimeout(function() { ensureMonthData(); }, 30);
             }
         }
-    } catch(e) {
-        document.getElementById('loadingArea').style.display = 'none';
-        document.getElementById('bannerArea').innerHTML =
-            '<div class="error-banner"><div><span class="error-title">❌ 数据加载异常</span> — ' + e.message + '</div><button class="btn btn-sm" onclick="initData()">🔄 重试</button></div>';
+    };
+
+    try {
+        if (!silent) {
+            document.getElementById('loadingArea').style.display = '';
+            document.getElementById('bannerArea').innerHTML = '';
+            document.getElementById('personSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+        }
+
+        var token = await acquireToken();
+        if (!token) {
+            document.getElementById('loadingArea').style.display = 'none';
+            showAuthUI();
+            return;
+        }
+
+        try {
+            // 第一批：首批窗口（周=最近2周；月=本月27日~今天），先渲染让界面尽快显示
+            var results1 = await fetchAllData(token, 'first2');
+            applyLoadedData(results1);
+
+            // 第二批：补齐完整窗口，后台加载完成后自动刷新界面
+            if (!silent) {
+                var tg2 = getFetchTargets();
+                var bannerTxt = viewUnit === 'month'
+                    ? '⏳ 已加载本月（' + formatShortDate(tg2.firstStart) + ' 起）数据，正在后台加载上月…'
+                    : '⏳ 已加载最近两周，正在后台加载第3~5周…';
+                document.getElementById('bannerArea').innerHTML = '<div class="info-banner">' + bannerTxt + '</div>';
+            }
+            try {
+                var results2 = await fetchAllData(token, 'rest2');
+                var merged = mergePhaseResults(results1, results2);
+                applyLoadedData(merged);
+            } catch(e) {
+                console.warn('[二批] 窗口数据加载失败，保持首批数据:', e.message);
+                if (!silent) {
+                    document.getElementById('bannerArea').innerHTML = '';
+                }
+            }
+        } catch(e) {
+            document.getElementById('loadingArea').style.display = 'none';
+            document.getElementById('bannerArea').innerHTML =
+                '<div class="error-banner"><div><span class="error-title">❌ 数据加载异常</span> — ' + e.message + '</div><button class="btn btn-sm" onclick="initData()">🔄 重试</button></div>';
+        }
+    } finally {
+        finish();
     }
+}
+
+// 切到月维度时数据覆盖不足 → 全量补拉一次（2026-09-05）。补拉后 _windowStartDate <= 上月27日起点，不再重复触发
+async function ensureMonthData() {
+    var needed = buildMonthOptions()[1].monday; // 上月逻辑月起点（如 7/27）
+    if (_windowStartDate && _windowStartDate <= needed) return; // 已覆盖，无需补拉
+    if (_initRunning) { _pendingUnitReload = true; return; }    // 双批加载中 → 收尾自动补拉
+    document.getElementById('bannerArea').innerHTML =
+        '<div class="info-banner">⏳ 正在加载月数据（本月先显示已有数据，上月为部分数据）…</div>';
+    window._monthLoading = true;    // 补拉期间 applyLoadedData 不清理此提示
+    try {
+        await initData(true);   // silent：不清空现有视图，首批到后即全量重渲染
+    } catch(e) {
+        window._monthLoading = false;
+        document.getElementById('bannerArea').innerHTML =
+            '<div class="error-banner"><div><span class="error-title">❌ 月数据加载失败</span> — ' + (e.message || '') + '</div><button class="btn btn-sm" onclick="ensureMonthData()">🔄 重试</button></div>';
+        return;
+    }
+    window._monthLoading = false;
+    document.getElementById('bannerArea').innerHTML =
+        '<div class="info-banner" style="background:#e6f7e6;border-color:#b8e6b8;color:#27ae60;">✅ 月数据加载完成</div>';
+    setTimeout(function() {
+        var b = document.getElementById('bannerArea');
+        if (b) b.innerHTML = '';
+    }, 2200);
 }
 
 // 应用已拉取结果：解析、更新全局数据并渲染界面（首批/合并后各调一次）
@@ -2248,21 +2930,17 @@ function applyLoadedData(results) {
     allErrors = processed.errors;
     samplingData = processed.sampling;
     weekOptions = buildWeekOptions();
-    // 保持当前周选择，不强制跳回本周
+    monthOptions = buildMonthOptions();
+    // 保持当前选择，不强制跳回（周/月各自记住位置）
     if (currentWeekIndex >= weekOptions.length) currentWeekIndex = 0;
+    if (currentMonthIndex >= monthOptions.length) currentMonthIndex = 0;
     dataReady = true;
 
-    // 填充周选择器
-    var selectHTML = '';
-    weekOptions.forEach(function(opt, i) {
-        selectHTML += '<option value="' + i + '"' + (i === currentWeekIndex ? ' selected' : '') + '>' + (opt.isCurrent ? '📌 ' : '📅 ') + opt.label + '</option>';
-    });
-    document.getElementById('weekSelect').innerHTML = selectHTML;
-    document.getElementById('btnPrevWeek').disabled = (currentWeekIndex >= weekOptions.length - 1);
-    document.getElementById('btnNextWeek').disabled = (currentWeekIndex <= 0);
+    populatePeriodSelect();
 
     document.getElementById('loadingArea').style.display = 'none';
-    document.getElementById('bannerArea').innerHTML = '';
+    // 月补拉（_monthLoading）期间保留顶部「⏳ 正在加载月数据…」提示，补拉完成后由 ensureMonthData 替换为 ✅
+    if (!window._monthLoading) document.getElementById('bannerArea').innerHTML = '';
 
     // 显示各Sheet加载状态
     var statusParts = [];
