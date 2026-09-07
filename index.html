@@ -325,12 +325,6 @@ tr.row-err-mid td { background: #fde8e8 !important; }
     <!-- 失误分析 -->
     <div class="section" id="errorSection" style="display:none;">
         <div class="section-title">🔍 失误分析 <button class="btn btn-sm" onclick="screenshotSection('errorSection','失误分析')" title="截图失误分析" style="margin-left:8px;">📸</button></div>
-        <div class="tabs" id="errorTabs">
-            <button class="tab-btn active" data-tab="初审">初审失误</button>
-            <button class="tab-btn" data-tab="抽检">抽检失误</button>
-            <button class="tab-btn" data-tab="QA">QA失误</button>
-        </div>
-        <span id="errorTotalBadge" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;align-self:center;"></span>
         <div id="errorTabContent"></div>
     </div>
 </div>
@@ -418,7 +412,6 @@ let currentWeekIndex = 0;     // 0=本周, 1=上周, 2=前周, 3=前三周
 let weekOptions = [];         // 可用周选项
 let personSortCol = 'accuracy'; // 当前排序列
 let personSortAsc = true;       // 排序方向（准确率默认升序：低的在前=需关注）
-let activeErrorTab = '初审';  // 当前失误分析Tab
 let currentSite = '成都';       // 当前站点筛选：默认成都
 let dataReady = false;
 // ===== 周期维度（2026-09-05）：'week'=周（默认，原逻辑不变）| 'month'=月（逻辑月=上月27~本月26）=====
@@ -1694,6 +1687,32 @@ function renderPersonTable(weekData, allWeeks) {
     var totalAccuracyAll = totalPanZeAll > 0 ? Math.max(0, (totalPanZeAll - totalAllErrors) / totalPanZeAll * 100) : null;
     var totalSampleAccAll = totalSamplingAll > 0 ? Math.max(0, (totalSamplingAll - totalErrorsAll) / totalSamplingAll * 100) : null; // 抽检准确率总计口径
 
+    // === 总计行环比小字（2026-09-07 用户需求：总计行每个数值格下方标注较上一周期升降值）===
+    // 基准=选中周期的上一周期（allWeeks[getCurIndex()+1]，与表头上一列同周期）；口径与本周总计行一致（personStats 求和）
+    var prevTotalRef = null;
+    var prevTotWd = (getCurIndex() + 1 < allWeeks.length) ? allWeeks[getCurIndex() + 1] : null;
+    if (prevTotWd && prevTotWd.personStats) {
+        var ts0 = 0, tp0 = 0, te0 = 0, tte0 = 0;
+        prevTotWd.personStats.forEach(function(ps) { ts0 += (ps.sampling || 0); tp0 += (ps.panZe || 0); te0 += (ps.errors || 0); tte0 += (ps.totalErrors || 0); });
+        prevTotalRef = {
+            sampling: ts0, panZe: tp0, errors: te0, totalErrors: tte0,
+            coverage: tp0 > 0 ? (ts0 / tp0 * 100) : 0,
+            sampleAcc: ts0 > 0 ? Math.max(0, (ts0 - te0) / ts0 * 100) : null,
+            acc: tp0 > 0 ? Math.max(0, (tp0 - tte0) / tp0 * 100) : null
+        };
+    }
+    // invert=true 表示该类指标「数值下降=改善」（失误类）→ 红=数值上升、绿=数值下降
+    function totDeltaHtml(cur, prev, invert, isPct, suffix) {
+        if (prev === null || prev === undefined || cur === null || cur === undefined) return '';
+        var d = cur - prev;
+        var isZero = isPct ? Math.abs(d) < 0.005 : d === 0;
+        var good = isZero ? false : (invert ? d < 0 : d > 0);
+        var col = isZero ? '#94a3b8' : (good ? '#27ae60' : '#c0392b');
+        var arrow = isZero ? '→' : (d > 0 ? '▲' : '▼');
+        var numTxt = isPct ? Math.abs(d).toFixed(2) + '%' : Math.abs(d) + (suffix || '');
+        return '<div style="font-size:0.58rem;font-weight:400;color:' + col + ';margin-top:2px;white-space:nowrap;">' + arrow + (isZero ? '持平' : numTxt) + '</div>';
+    }
+
     // 计算总计的跨周期趋势（判责准确率口径，选定周期起往前取）
     var totalAccHistory = [];
     for (var tw = maxWeeks - 1; tw >= 0; tw--) {
@@ -1713,13 +1732,13 @@ function renderPersonTable(weekData, allWeeks) {
         "<td style=\"text-align:center;\">📊</td>" +
         "<td class=\"col-name\" style=\"font-weight:700;\">总计 <span style=\"font-weight:400;color:#5e6f8d;\">(" + stats.length + "人)</span></td>" +
         "<td style=\"text-align:center;\">--</td>" +
-        "<td class=\"col-num\">" + totalSamplingAll + "</td>" +
-        "<td class=\"col-num\">" + totalPanZeAll + "</td>" +
-        "<td class=\"col-num\">" + (totalPanZeAll > 0 ? totalCoverageAll.toFixed(2) + "%" : "--") + "</td>" +
-        "<td class=\"col-num\">" + totalErrorsAll + "</td>" +
-        "<td class=\"col-num fw-600\" style=\"color:" + (totalSampleAccAll === null ? "#94a3b8" : (totalSampleAccAll >= 99.5 ? "#27ae60" : (totalSampleAccAll < 99 ? "#c0392b" : "#f39c12"))) + "\">" + (totalSampleAccAll === null ? "--" : totalSampleAccAll.toFixed(2) + "%") + "</td>" +
-        "<td class=\"col-num fw-600\">" + totalAllErrors + "</td>" +
-        "<td class=\"col-num fw-600\" style=\"color:" + totalAccColor + "\">" + totalAccTxt + "</td>" +
+        "<td class=\"col-num\">" + totalSamplingAll + totDeltaHtml(totalSamplingAll, prevTotalRef ? prevTotalRef.sampling : null, false, false, "台") + "</td>" +
+        "<td class=\"col-num\">" + totalPanZeAll + totDeltaHtml(totalPanZeAll, prevTotalRef ? prevTotalRef.panZe : null, false, false, "台") + "</td>" +
+        "<td class=\"col-num\">" + (totalPanZeAll > 0 ? totalCoverageAll.toFixed(2) + "%" : "--") + totDeltaHtml(totalPanZeAll > 0 ? totalCoverageAll : null, prevTotalRef ? prevTotalRef.coverage : null, false, true, "") + "</td>" +
+        "<td class=\"col-num\">" + totalErrorsAll + totDeltaHtml(totalErrorsAll, prevTotalRef ? prevTotalRef.errors : null, true, false, "条") + "</td>" +
+        "<td class=\"col-num fw-600\" style=\"color:" + (totalSampleAccAll === null ? "#94a3b8" : (totalSampleAccAll >= 99.5 ? "#27ae60" : (totalSampleAccAll < 99 ? "#c0392b" : "#f39c12"))) + "\">" + (totalSampleAccAll === null ? "--" : totalSampleAccAll.toFixed(2) + "%") + totDeltaHtml(totalSampleAccAll, prevTotalRef ? prevTotalRef.sampleAcc : null, false, true, "") + "</td>" +
+        "<td class=\"col-num fw-600\">" + totalAllErrors + totDeltaHtml(totalAllErrors, prevTotalRef ? prevTotalRef.totalErrors : null, true, false, "条") + "</td>" +
+        "<td class=\"col-num fw-600\" style=\"color:" + totalAccColor + "\">" + totalAccTxt + totDeltaHtml(totalAccuracyAll, prevTotalRef ? prevTotalRef.acc : null, false, true, "") + "</td>" +
         "<td class=\"col-num\">" + (totalSpark || "<span class=\"text-muted\">--</span>") + "</td>" +
         "<td class=\"text-center\">" + totalTrendIcon + "</td>" +
         "</tr>";
@@ -1784,206 +1803,479 @@ function renderPersonTable(weekData, allWeeks) {
     if (activeTh) activeTh.textContent = personSortAsc ? '▲' : '▼';
 }
 
+// ===== 失误分析（2026-09-07 周月统一版式：入口薄壳）=====
+// 周/月都走 renderDimAnalysis（见下）：顶部 5 张等宽卡联动 + 三来源合计主体 + 全类别排比。
+// 周版额外在主体下方展示合并式「典型失误订单」明细（buildWeeklyMergedDetail）；
+// 月版主体右侧为「月内周度失误走势」矩阵。旧版三来源互斥 Tab 结构已废弃删除。
 function renderErrorAnalysis(weekData, prevWeekData) {
-    // 月维度：三来源纵排整块（无互斥Tab、无明细表）→ 直接走月度渲染
-    if (viewUnit === 'month') { renderErrorMonthly(weekData, prevWeekData); return; }
-    var src = activeErrorTab;
-    var catStats = weekData.categoryStats[src] || [];
-    var prevCatMap = {};
-    if (prevWeekData && prevWeekData.categoryStats[src]) {
-        prevWeekData.categoryStats[src].forEach(function(c) { prevCatMap[c.name] = c.count; });
+    renderDimAnalysis(weekData, prevWeekData);
+}
+
+// ===== 周版「典型失误订单」合并明细（2026-09-07）=====
+// 跨三来源单表；同 站点+类别（硬键）且备注相同/相似（编辑距离相似度≥75%）或语义等同（同义词表
+// NOTE_SEM_GROUPS，如 无备注/漏备注/备注错）自动合并为一行并显示 ×N（2026-09-07 二次修订：
+// 去掉品类硬键，跨品类合并，品类列多值并列如 手机/平板；无「+相似K种」灰标）。
+// 模糊组备注列=组内首条，语义等同组按规范名显示（如 漏备注/无备注/备注错 → 「备注问题」）；
+// 来源列区分行出自哪些表（跨来源组合并时多标签并列并各自带条数）。
+// 行排序：类别连续成块——低级/投诉(0) → 明显失误/扣错项(1) → 其他(2)；类别内先类别总量降序、同量取块内最新日期，
+// 块内组按最新日期降序（2026-09-07 连块排序，不再因数量相同而交错）。
+// 隐藏：新 key（qc_hidden_站点_周起点_merged）记录合并组（隐藏标识=站点|类别|组首备注）；兼容旧记录（4键含备注 / 3键含品类 / 来源级旧 key）
+// ——某组任一原始行被旧 key 隐藏过 → 整组隐藏；「恢复全部」= 清除新旧全部 key。
+function buildWeeklyMergedDetail(dimId, dc, curWd) {
+    var wd = curWd;
+    var start = formatDate(wd.monday);
+    var newKey = 'qc_hidden_' + currentSite + '_' + start + '_merged';
+    var oldKeys = ['初审', '抽检', 'QA'].map(function(s) { return 'qc_hidden_' + currentSite + '_' + s + '_' + start; });
+    var dimDesc = dc ? dc.id : '三来源';
+    var rows = monthDimRows(dimId, wd);   // 当前维度（随卡片联动）：窗口+站点+来源/类别规则过滤
+    var isCatCard = !!(dc && dc.isCat);
+
+    // —— 聚合：同 站点|类别（硬键）下，备注相同或相似（编辑距离相似度 ≥75%）合并为一组（跨品类）——
+    // 备注相似度 = 1 − 编辑距离/两备注较长者长度；完全相同是相似的特例（=1）被自然覆盖。
+    // 空备注装载层统一为 '-'：'-' 之间相似度=1 可同组；'-' 与其他文本相似度极低，不会误并。
+    // 组备注列=组内首条；先到先聚（顺序随 rows），几十组规模 O(n·g) 无压力。
+    function editSim(a, b) {
+        if (a === b) return 1;
+        var m = a.length, n = b.length;
+        if (m === 0 || n === 0) return 0;
+        if (m > n) { var sw = a; a = b; b = sw; var t2 = m; m = n; n = t2; }
+        var prev = [], cur = [];
+        for (var i = 0; i <= m; i++) prev[i] = i;
+        for (var j = 1; j <= n; j++) {
+            cur[0] = j;
+            for (var i = 1; i <= m; i++) {
+                var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+                cur[i] = Math.min(prev[i] + 1, cur[i - 1] + 1, prev[i - 1] + cost);
+            }
+            for (var i2 = 0; i2 <= m; i2++) prev[i2] = cur[i2];
+        }
+        return 1 - prev[m] / n;
     }
+    // 语义等同词表：文字不同但意思相同的备注 → 也视为同组、合并为一条（2026-09-07 用户定：
+    // 「无备注、漏备注、备注错 这种语义上类似的就整合为 1 条」）。比较前先归一化（去空格/标点/大小写）。
+    // 日后遇到新的同义表述（如「传错照片 / 照片传错」这类），在对应数组补一词即可自动生效。
+    // name=该组在备注格里统一显示的规范名（2026-09-07 用户定：语义等同的整组不显示某一条原文，
+    // 如 无备注/漏备注/备注错 → 显示「备注问题」）；words=互认同义的说法；prefix=true 时 words 支持
+    // 前缀匹配——「扣错项，机身弯曲」「扣错项，后摄拍照有斑导致的差价」「传错图片主动报备」这类带
+    // 具体细节后缀的说法一并归组（判错项/扣错项→判错项；传错图片(主动报备)/传错照片→传错照片）。
+    // 日后遇到新的同义说法，往对应组 words 里补词即可自动生效。
+    var NOTE_SEM_GROUPS = [
+        { name: '备注问题', words: ['无备注', '漏备注', '备注错', '备注错误', '备注写错', '写错备注', '备注填错', '填错备注',
+         '漏写备注', '漏填备注', '忘写备注', '忘记备注', '没写备注', '未写备注',
+         '没备注', '未备注', '忘备注', '备注未填', '备注忘填', '备注没填', '备注漏填'] },
+        { name: '判错项', prefix: true, words: ['判错项', '扣错项'] },
+        { name: '传错照片', prefix: true, words: ['传错照片', '照片传错', '传错图片', '图片传错', '传错相片'] }
+    ];
+    function normNoteTxt(s) {
+        return String(s || '').replace(/[\s　。．.、,，·~～\-—]+/g, '').toLowerCase();
+    }
+    // 备注命中语义组 → 返回规范名（渲染用）；未命中返回 null（保持组首原文）
+    function semHitOf(note) {
+        var nn = normNoteTxt(note);
+        if (!nn) return null;
+        for (var gi2 = 0; gi2 < NOTE_SEM_GROUPS.length; gi2++) {
+            var grp = NOTE_SEM_GROUPS[gi2];
+            for (var wi2 = 0; wi2 < grp.words.length; wi2++) {
+                var w = grp.words[wi2];
+                if (nn === w || (grp.prefix && nn.indexOf(w) === 0)) return grp.name;
+            }
+        }
+        return null;
+    }
+    function noteSemEq(a, b) {
+        var ha = semHitOf(a), hb = semHitOf(b);
+        if (!ha || !hb) return false;
+        return ha === hb;      // 空/相同文本由上方 editSim 覆盖（sim=1），此处不会误判
+    }
+    var groups = [];
+    rows.forEach(function(e) {
+        var clusterKey = [e.site || '', e.category || ''].join('|').toLowerCase();   // 跨品类聚类键：站点|类别
+        var note = e.note || '';
+        var g = null;
+        for (var gi = 0; gi < groups.length; gi++) {
+            if (groups[gi].clusterKey === clusterKey && (editSim(groups[gi].note, note) >= 0.75 || noteSemEq(groups[gi].note, note))) { g = groups[gi]; break; }
+        }
+        if (!g) {
+            // key=隐藏标识（站点|类别|组首备注，唯一标识本组，避免同类别不同备注组互误隐藏）
+            g = { key: [e.site || '', e.category || '', note].join('|').toLowerCase(), clusterKey: clusterKey, site: e.site, category: e.category || '', note: note, semName: semHitOf(note), list: [], persons: {}, sources: {}, products: {} };
+            groups.push(g);
+        }
+        g.list.push(e);
+        g.products[e.product || '-'] = (g.products[e.product || '-'] || 0) + 1;
+        var pn = fixPanZeName(e.reviewer) || '';
+        if (pn) g.persons[pn] = 1;
+        var s = e.source || '';
+        g.sources[s] = (g.sources[s] || 0) + 1;
+    });
 
-    var totalErrors = weekData.errorsBySource ? weekData.errorsBySource[src] : (
-        src === '初审' ? weekData.csErrors : (src === '抽检' ? weekData.cjErrors : weekData.qaErrors)
-    );
-
-    var prevTotal = prevWeekData ? (
-        src === '初审' ? prevWeekData.csErrors : (src === '抽检' ? prevWeekData.cjErrors : prevWeekData.qaErrors)
-    ) : 0;
-
-    // 汇总：双周期对比表（本周 vs 上周；2026-09-05 替代原单值汇总卡）
-    var uw = unitWords(getCurIndex());
-    var summaryHTML = '<div class="error-summary">' +
-        '<div class="es-title">📊 ' + uw.cur + '汇总 · 对比' + uw.prev + '</div>' +
-        buildPeriodCompare(src, weekData, prevWeekData, totalErrors, prevTotal, catStats) +
-        '</div>';
-
-    // Top 类别
-    var topHTML = '<div class="error-toplist"><div class="et-title">📈 Top 5 失误类别</div>';
-    if (catStats.length === 0) {
-        topHTML += '<div class="text-muted text-sm">本周无失误记录</div>';
-    } else {
-        var maxCount = catStats[0] ? catStats[0].count : 1;
-        catStats.slice(0, 5).forEach(function(c, i) {
-            var pct = totalErrors > 0 ? (c.count / totalErrors * 100).toFixed(2) : 0;
-            var barW = totalErrors > 0 ? (c.count / totalErrors * 100).toFixed(0) : 0;
-            var prevCount = prevCatMap[c.name] || 0;
-            var deltaStr = '';
-            if (prevWeekData) {
-                if (prevCount > 0 && c.count !== prevCount) {
-                    var d = c.count - prevCount;
-                    deltaStr = ' <span style="font-size:0.7rem;' + (d > 0 ? 'color:#c0392b' : 'color:#27ae60') + '">' + (d > 0 ? '↑' : '↓') + Math.abs(d) + '</span>';
-                } else if (prevCount === 0 && c.count > 0) {
-                    deltaStr = ' <span style="font-size:0.7rem;color:#c0392b;">新增</span>';
-                } else if (prevCount > 0 && c.count === prevCount) {
-                    deltaStr = ' <span style="font-size:0.7rem;color:#5e6f8d;">→持平</span>';
+    // —— 每组：数量/日期范围/隐藏判定（新旧 key 并用；任一条被旧 key 隐藏过 → 整组隐藏）——
+    // 新组隐藏 key=站点|类别|组首备注（同类别不同备注组互不误伤）；历史隐藏兼容逐行检测：四键（含备注）/三键（含品类）命中 → 整组隐藏
+    var oldSets = oldKeys.map(function(k) { return loadHiddenSet(k); });
+    var newSet = loadHiddenSet(newKey);
+    var hiddenN = 0;
+    function oldGroupKeyOf(e) {
+        return [e.site || '', e.product || '', e.category || '', e.note || ''].join('|').toLowerCase();
+    }
+    function legacyKey3Of(e) {
+        return [e.site || '', e.product || '', e.category || ''].join('|').toLowerCase();
+    }
+    groups.forEach(function(g) {
+        g.n = g.list.length;
+        var ts = g.list.map(function(e) { return e.date.getTime(); });
+        g.minT = Math.min.apply(null, ts);
+        g.maxT = Math.max.apply(null, ts);
+        g.hidden = !!newSet[g.key];
+        if (!g.hidden) {
+            for (var i = 0; i < g.list.length && !g.hidden; i++) {
+                var e0 = g.list[i];
+                if (newSet[oldGroupKeyOf(e0)] || newSet[legacyKey3Of(e0)]) { g.hidden = true; break; }
+                var rk = errRowKey(e0);
+                for (var j = 0; j < oldSets.length; j++) {
+                    if (oldSets[j][rk]) { g.hidden = true; break; }
                 }
             }
-            topHTML += '<div class="et-item">' +
-                '<span class="et-rank">' + (i + 1) + '</span>' +
-                '<span class="et-cat" title="' + c.name + '">' + c.name + '</span>' +
-                '<div class="et-bar-wrap"><div class="et-bar cat-' + i + '" style="width:' + barW + '%"></div></div>' +
-                '<span class="et-count">' + c.count + ' (' + pct + '%)</span>' +
-                '<span class="et-trend">' + deltaStr + '</span>' +
-                '</div>';
-        });
-    }
-    topHTML += '</div>';
-
-    // 失误明细表：全量逐条展示 + 每行「✕」手动隐藏（localStorage 长期记忆，2026-09-05）
-    var weekErrors = allErrors.filter(function(e) {
-        return e.source === src && isInWeek(e.date, weekData.monday, weekData.sunday) && siteMatch(e, currentSite);
-    });
-    // 备注 key 不带前缀（周模式旧 key，向后兼容已存备注）；m_ 前缀仅用于月视图
-    var noteKey = 'qc_note_' + currentSite + '_' + src + '_' + formatDate(weekData.monday);
-    var hidKey = 'qc_hidden_' + currentSite + '_' + src + '_' + formatDate(weekData.monday);
-    var hiddenSet = loadHiddenSet(hidKey);
-    var shownErrors = [];
-    weekErrors.forEach(function(e) { if (!hiddenSet[errRowKey(e)]) shownErrors.push(e); });
-    var hiddenN = weekErrors.length - shownErrors.length;
-
-    var detailHTML = '<div style="margin-top:16px;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
-        '<div style="font-weight:600;color:var(--primary);">📋 ' + src + '典型失误订单（' + weekErrors.length + '条' + (hiddenN > 0 ? '，已隐藏 ' + hiddenN + ' 条' : '') + '）</div>' +
-        (hiddenN > 0 ? '<button class="btn btn-sm" data-act="restore" title="恢复本周期全部已隐藏订单">↩️ 恢复全部</button>' : '') +
-        '</div>';
-    if (weekErrors.length === 0) {
-        detailHTML += '<div class="text-muted text-sm" style="padding:20px;text-align:center;">暂无失误记录</div>';
-    } else if (shownErrors.length === 0) {
-        detailHTML += '<div class="text-muted text-sm" style="padding:20px;text-align:center;">本周期失误订单已全部隐藏 ✅（点击右上「恢复全部」可还原）</div>';
-    } else {
-        detailHTML += '<div class="table-wrap"><table class="data-table"><thead><tr>' +
-            '<th>日期</th><th>站点</th><th>品类</th><th>失误类别</th><th>人员</th><th>备注</th><th>质检码</th>' +
-            '<th class="shot-hide-col" style="width:26px;"></th>' +
-            '</tr></thead><tbody>';
-        // 分组优先级：低级/投诉(0) 最顶 → 明显失误/扣错项(1) → 其他(2)；组内按类别数量降序，同类内日期降序
-        function errPriority(cat) {
-            var c = cat || '';
-            if (c.indexOf('低级') >= 0 || c.indexOf('投诉') >= 0) return 0;
-            if (c.indexOf('明显失误') >= 0 || c.indexOf('扣错项') >= 0) return 1;
-            return 2;
         }
-        var catCountMap = {};
-        var personCatCountMap = {};
-        shownErrors.forEach(function(e) {
-            catCountMap[e.category] = (catCountMap[e.category] || 0) + 1;
-            var pk = e.category + '|' + e.reviewer;
-            personCatCountMap[pk] = (personCatCountMap[pk] || 0) + 1;
-        });
-        shownErrors.sort(function(a, b) {
-            var gp = errPriority(a.category) - errPriority(b.category);
-            if (gp !== 0) return gp;
-            var cntCmp = (catCountMap[b.category] || 0) - (catCountMap[a.category] || 0);
-            if (cntCmp !== 0) return cntCmp;
-            // 同类内：同一失误人员聚合，该人在此类别失误数多的在前
-            var pCmp = (personCatCountMap[b.category + '|' + b.reviewer] || 0) - (personCatCountMap[a.category + '|' + a.reviewer] || 0);
-            if (pCmp !== 0) return pCmp;
-            var nameCmp = (a.reviewer || '').localeCompare(b.reviewer || '', 'zh');
-            if (nameCmp !== 0) return nameCmp;
-            return b.date - a.date;        // 同人内日期新的在前
-        });
+        if (g.hidden) hiddenN += g.n;
+    });
+    var visGroups = groups.filter(function(g) { return !g.hidden; });
 
-        shownErrors.forEach(function(e) {
-            var searchText = [e.dateStr || '', e.site || '', e.product || '', e.category || '', e.reviewer || '', e.note || '', e.qcCode || ''].join('|').toLowerCase();
+    // —— 排序：低投/明显/其他 → 类别计数降序 → 同类内最新日期降序 ——
+    function errPriority(cat) {
+        var c = cat || '';
+        if (c.indexOf('低级') >= 0 || c.indexOf('投诉') >= 0) return 0;
+        if (c.indexOf('明显失误') >= 0 || c.indexOf('扣错项') >= 0) return 1;
+        return 2;
+    }
+    var catTot = {};
+    visGroups.forEach(function(g) { catTot[g.category] = (catTot[g.category] || 0) + g.n; });
+    // —— 类别连块排序（2026-09-07）：先定类别顺序（低投→明显→类别总量降序，同量取块内最新日期）——
+    // 类别顺序固定后组们按 块序 + 组内最新日期降序，同类永远连排，不再因数量/日期相同而交错
+    function catMaxOf(c) {
+        var m = 0;
+        visGroups.forEach(function(g) { if (g.category === c && g.maxT > m) m = g.maxT; });
+        return m;
+    }
+    var catList = [];
+    visGroups.forEach(function(g) { if (catList.indexOf(g.category) < 0) catList.push(g.category); });
+    catList.sort(function(ca, cb) {
+        var pa = errPriority(ca), pb = errPriority(cb);
+        if (pa !== pb) return pa - pb;
+        var ta = catTot[ca] || 0, tb = catTot[cb] || 0;
+        if (ta !== tb) return tb - ta;
+        var ma = catMaxOf(ca), mb = catMaxOf(cb);
+        if (ma !== mb) return (ma < mb ? 1 : -1);
+        return 0;
+    });
+    var catRank = {};
+    catList.forEach(function(c, i) { catRank[c] = i; });
+    visGroups.sort(function(a, b) {
+        var ra = catRank[a.category], rb = catRank[b.category];
+        if (ra !== rb) return ra - rb;
+        // 块内排序（2026-09-07 用户定）：×N 合并组置顶按 N 降序（判错项×4 → 传错×2）→ 单条行 → 同类最新日期降序
+        var ga = a.n > 1 ? 1 : 0, gb = b.n > 1 ? 1 : 0;
+        if (ga !== gb) return gb - ga;
+        if (a.n !== b.n) return b.n - a.n;
+        if (a.maxT !== b.maxT) return b.maxT - a.maxT;
+        return a.minT - b.minT;
+    });
+
+    // —— 标题行（条数 + 已隐藏 + 恢复全部按钮）——
+    var titleTxt = (dimDesc === '三来源')
+        ? '📋 典型失误订单（三来源 · ' + rows.length + ' 条' + (hiddenN > 0 ? '，已隐藏 ' + hiddenN + ' 条' : '') + '）'
+        : '📋 ' + dimDesc + '典型失误订单（' + rows.length + ' 条' + (hiddenN > 0 ? '，已隐藏 ' + hiddenN + ' 条' : '') + '）';
+    var shotLabel = (dimDesc === '三来源') ? '典型失误订单' : dimDesc + '典型失误订单';
+    var restoreHtml = (hiddenN > 0
+        ? '<button class="btn btn-sm shot-hide-btn" data-act="restore" data-restore-keys="' + JSON.stringify([newKey].concat(oldKeys)).replace(/"/g, '&quot;') + '" title="恢复本周期全部已隐藏订单">↩️ 恢复全部</button>'
+        : '');
+    var html = '<div style="margin-top:16px;" id="weeklyMergedSec">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+        '<div style="font-weight:600;color:var(--primary);">' + titleTxt + '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn btn-sm shot-hide-btn" onclick="screenshotSection(\'weeklyMergedSec\',\'' + shotLabel + '\')" title="只截图本明细表（标题+合并明细），不含下方灰色说明与操作按钮">📸 截此表</button>' +
+        restoreHtml +
+        '</div></div>';
+
+    // —— 空态 / 全隐藏 / 正常表 ——
+    if (rows.length === 0) {
+        html += '<div class="text-muted text-sm" style="padding:16px;text-align:center;">本周期无失误记录</div>';
+    } else if (visGroups.length === 0) {
+        html += '<div class="text-muted text-sm" style="padding:16px;text-align:center;">本周期失误订单已全部隐藏 ✅（点右上「恢复全部」可还原）</div>';
+    } else {
+        var body = '';
+        visGroups.forEach(function(g) {
+            var dateTxt = (g.minT === g.maxT)
+                ? formatShortDate(new Date(g.minT))
+                : formatShortDate(new Date(g.minT)) + ' ~ ' + formatShortDate(new Date(g.maxT));
             var siteClass = '';
-            if (e.site === '深圳') siteClass = 'sz';
-            else if (e.site === '青岛') siteClass = 'qd';
-            else if (e.site === '成都') siteClass = 'cd';
-            var rowClass = '';
-            if (e.category.indexOf('低级') >= 0 || e.category.indexOf('投诉') >= 0) rowClass = ' class="row-err-low"';
-            else if (e.category.indexOf('明显失误') >= 0 || e.category.indexOf('扣错项') >= 0) rowClass = ' class="row-err-mid"';
-            detailHTML += '<tr' + rowClass + ' data-search="' + searchText + '">' +
-                '<td>' + formatShortDate(e.date) + '</td>' +
-                '<td>' + (e.site ? '<span class="site-tag ' + siteClass + '">' + e.site + '</span>' : '--') + '</td>' +
-                '<td>' + (e.product || '--') + '</td>' +
-                '<td>' + e.category + '</td>' +
-                '<td>' + e.reviewer + '</td>' +
-                '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (e.note || '') + '">' + (e.note || '--') + '</td>' +
-                '<td>' + (e.qcCode || '--') + '</td>' +
-                '<td class="shot-hide-col" style="width:26px;text-align:center;"><span class="row-hide-btn" data-act="hide" data-hkey="' + errRowKey(e) + '" title="隐藏此行">✕</span></td>' +
+            if (g.site === '深圳') siteClass = 'sz';
+            else if (g.site === '青岛') siteClass = 'qd';
+            else if (g.site === '成都') siteClass = 'cd';
+            var rowCls = errPriority(g.category) === 0 ? ' class="row-err-low"' : (errPriority(g.category) === 1 ? ' class="row-err-mid"' : '');
+            var multi = g.n > 1;
+            // 来源列：单来源=单个色点标签；跨来源合并=多标签，各来源条数>1 时附 ×n
+            var srcTags = '';
+            Object.keys(g.sources).forEach(function(s) {
+                var sc = s === '初审' ? 'cs' : (s === '抽检' ? 'cj' : 'qa');
+                var cnt = g.sources[s];
+                var cross = Object.keys(g.sources).length > 1;
+                srcTags += '<span class="source-tag ' + sc + '" style="margin-right:4px;">' + s + ((cross && cnt > 1) ? '×' + cnt : '') + '</span>';
+            });
+            // 品类列：跨品类合并=多值并列（该品类>1 条时附 ×n）；单品类直接显示；全空显示 '--'
+            var prodKeys = Object.keys(g.products).filter(function(p) { return p && p !== '-'; });
+            var prodTxt = '--';
+            if (prodKeys.length === 1) prodTxt = prodKeys[0];
+            else if (prodKeys.length > 1) prodTxt = prodKeys.map(function(p) { var pc = g.products[p]; return p + (pc > 1 ? '×' + pc : ''); }).join(' / ');
+            // ×N 徽标挂在备注末尾（2026-09-07 用户定：不放在类别后）；相似变体不另标说明（2026-09-07 用户再定：直接并入，不要「+相似K种」）
+            var nBadge = multi ? ' <b style="color:#c0392b;">×' + g.n + '</b>' : '';
+            // 备注格文字：语义等同组（无备注/漏备注/备注错…）整组显示规范名「备注问题」；普通相似/相同组显示组首原文（2026-09-07 用户定）
+            var showNote = g.semName || g.note;
+            var persons = Object.keys(g.persons);
+            body += '<tr' + rowCls + '>' +
+                '<td style="white-space:nowrap;">' + dateTxt + '</td>' +
+                '<td>' + (g.site ? '<span class="site-tag ' + siteClass + '">' + g.site + '</span>' : '--') + '</td>' +
+                '<td>' + prodTxt + '</td>' +
+                '<td>' + srcTags + '</td>' +
+                '<td>' + g.category + '</td>' +
+                '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (g.semName || g.note || '') + '">' + (showNote || '--') + nBadge + '</td>' +
+                '<td style="max-width:150px;line-height:1.65;overflow-wrap:break-word;" title="' + persons.join('、') + '">' + persons.join('、') + '</td>' +
+                '<td class="shot-hide-col" style="width:26px;text-align:center;"><span class="row-hide-btn" data-act="hide" data-hid-key="' + newKey + '" data-hkey="' + g.key + '" title="' + (multi ? '隐藏同类别相似订单共 ' + g.n + ' 条（跨品类）' : '隐藏此行') + '">✕</span></td>' +
                 '</tr>';
         });
-        detailHTML += '</tbody></table></div>';
+        html += '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+            '<th>日期</th><th>站点</th><th>品类</th><th>来源</th><th>失误类别</th><th>备注</th><th>涉及人员</th>' +
+            '<th class="shot-hide-col" style="width:26px;"></th>' +
+            '</tr></thead><tbody>' + body + '</tbody></table>' +
+            '<div class="shot-hide-note" style="margin-top:6px;font-size:0.68rem;color:#94a3b8;">同站点、同失误类别且备注相同/相似（≥75%）或语义等同（如 漏备注/无备注 归「备注问题」、扣错项/判错项 归「判错项」、传错图片/传错照片 归「传错照片」）自动合并为一条并跨品类累计（品类列并列如「手机/平板」，×N=总条数）；✕ 整组隐藏，本说明与操作按钮不出现在截图中</div>' +
+            '</div>';
+
     }
-    // 问题点解析 + 改善方向（左右并排；2026-09-05）
-    detailHTML += '<div style="display:flex;gap:10px;margin-top:12px;">' +
-        '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">🔎 问题点解析</div>' +
-        '<textarea id="errorAnalysisNote" data-note-key="' + noteKey + '" placeholder="记录本周失误的问题点分析…" style="width:100%;height:96px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
-        '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">💡 改善方向</div>' +
-        '<textarea id="errorImproveNote" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:96px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
-        '</div>';
-    detailHTML += '</div>';
-
-    document.getElementById('errorTabContent').innerHTML =
-        '<div class="error-analysis-grid">' + summaryHTML + topHTML + '</div>' + detailHTML;
-
-    // 明细行「✕」隐藏 / 「恢复全部」（直接绑定，避免内嵌字符串转义问题）
-    var contentEl = document.getElementById('errorTabContent');
-    contentEl.querySelectorAll('[data-act="hide"]').forEach(function(btn) {
-        btn.onclick = function() { hideErrRow(hidKey, btn.dataset.hkey); };
-    });
-    contentEl.querySelectorAll('[data-act="restore"]').forEach(function(btn) {
-        btn.onclick = function() { localStorage.removeItem(hidKey); refreshView(); };
-    });
-
-    // 恢复已保存的问题点解析和改善方向
-    ['errorAnalysisNote', 'errorImproveNote'].forEach(function(id) {
-        var ta = document.getElementById(id);
-        if (!ta) return;
-        var k = ta.dataset.noteKey;
-        var suffix = (id === 'errorAnalysisNote') ? '_analysis' : '_improve';
-        var saved = localStorage.getItem(k + suffix);
-        if (saved) ta.value = saved;
-        ta.oninput = function() { localStorage.setItem(k + suffix, this.value); };
-    });
+    html += '</div>';
+    return html;
 }
 
-// ===== 失误分析通用工具（2026-09-05）=====
-
-// 双周期对比汇总表：本周期 | 上一周期 | 环比（失误总数/失误类别数/涉及人员）；周月通用
-function buildPeriodCompare(src, curWd, prevWd, curTotal, prevTotal, curCats) {
-    function pc(wd) {
-        if (!wd || !wd.personStats) return 0;
-        return wd.personStats.filter(function(p) {
-            return src === '初审' ? p.errorsCS > 0 : (src === '抽检' ? p.errorsCJ > 0 : p.errorsQA > 0);
-        }).length;
+// ===== ⚠️ 失误人员 Top3 独立模块（2026-09-07 用户定：不嵌明细块内，置失误分析底部独立成模块）=====
+// 每人一张卡片并排平分宽度；卡片内容=对该人员（当前维度，如 初审/抽检/QA/三来源）失误的深度分析：
+// 上半两栏 flex:1 平分：左=N 条·占全量% + 下方进度条（按第 1 名满条）；右=近 4 周对比柱（与周度走势同口径
+// 取最近 4 档，柱顶显示每周失误数字，最右=本周主题深色，悬停看「X起 N 条」）；
+// 下方四行（失误类别/来源分布/涉及品类/日期范围）名称行在上、内容另起行提行排，三卡同构同一水平线，来源行不因单源而隐藏；
+// 卡片白底（名次区分靠徽章/数字/柱颜色）；类别 chip：带 ×N 的红橙黄渐变热力（淡色填充+同系深字，失误越多越偏红），单条白底灰边；
+// 口径与明细表同源（rows=当前维度窗口原始行），随 5 卡联动；
+// 第 3 名并列人数在模块底部灰字提示；空周期无输出
+function buildErrTop3Module(dimId, dc, curWd) {
+    var wd = curWd;
+    var dimDesc = dc ? dc.id : '三来源';
+    var rows = monthDimRows(dimId, wd);
+    if (!rows || rows.length === 0) return '';
+    var cnt = {};
+    var topTot = 0;
+    rows.forEach(function(e) {
+        var nm = fixPanZeName(e.reviewer) || '';
+        if (!nm) return;
+        var rec = cnt[nm];
+        if (!rec) rec = cnt[nm] = { n: 0, src: {}, cats: {}, prods: {} };
+        rec.n++;
+        topTot++;
+        var s2 = e.source || '其他';
+        rec.src[s2] = (rec.src[s2] || 0) + 1;
+        var ca = e.category || '未分类';
+        rec.cats[ca] = (rec.cats[ca] || 0) + 1;
+        var pr = (e.product && e.product !== '-') ? e.product : '';
+        if (pr) rec.prods[pr] = (rec.prods[pr] || 0) + 1;
+    });
+    // —— 近 4 周窗口（与「周度失误走势」同口径：选中周档起往前共 4 档；缓存兜底=仅当前周）——
+    var cacheW = window._allWeeksCache || [];
+    var fromI = -1;
+    for (var ci = 0; ci < cacheW.length; ci++) {
+        if (cacheW[ci] && cacheW[ci].monday && cacheW[ci].monday.getTime() === wd.monday.getTime()) { fromI = ci; break; }
     }
-    function col(wd) {
-        if (!wd) return '--';
-        var lbl = periodLabelHtml(wd);
-        var rng = formatShortDate(wd.monday) + '~' + formatShortDate(wd.sunday);
-        return lbl + '<br><span style="font-weight:400;font-size:0.66rem;color:#5e6f8d;">' + rng + '</span>';
+    if (fromI < 0) {
+        for (var ci2 = 0; ci2 < cacheW.length; ci2++) {
+            if (cacheW[ci2] && cacheW[ci2].monday && cacheW[ci2].monday.getTime() <= wd.monday.getTime()) { fromI = ci2; break; }
+        }
     }
-    function fmtTrend(t) {
-        return t ? '<span class="' + t.cls + '">' + t.text + '</span>' : '<span class="text-muted">--</span>';
+    var weeks4 = [];
+    if (fromI >= 0) {
+        // 缓存 index0=当前周（新→旧），unshift 倒序收集 → 旧→新（柱图最右=本周）
+        for (var wi4 = 0; wi4 < 4 && fromI + wi4 < cacheW.length; wi4++) {
+            if (cacheW[fromI + wi4] && cacheW[fromI + wi4].monday) weeks4.unshift(cacheW[fromI + wi4]);
+        }
     }
-    var prevCatStats = (prevWd && prevWd.categoryStats) ? (prevWd.categoryStats[src] || null) : null;
-    var t1 = computeTrend(curTotal, prevTotal);   // 失误总数（下降=绿=改善）
-    var t2 = prevCatStats === null ? null : computeTrend((curCats || []).length, prevCatStats.length);
-    var prevP = prevWd ? pc(prevWd) : null;
-    var t3 = prevP === null ? null : computeTrend(pc(curWd), prevP);
-    return '<table class="cmp-table"><thead><tr>' +
-        '<th>指标</th><th class="n">' + col(curWd) + '</th><th class="n">' + col(prevWd) + '</th><th class="n">环比</th>' +
-        '</tr></thead><tbody>' +
-        '<tr><td>失误总数</td><td class="n">' + curTotal + ' 条</td><td class="n">' + (prevWd ? prevTotal + ' 条' : '--') + '</td><td class="n">' + fmtTrend(t1) + '</td></tr>' +
-        '<tr><td>失误类别数</td><td class="n">' + (curCats || []).length + ' 个</td><td class="n">' + (prevCatStats === null ? '--' : prevCatStats.length + ' 个') + '</td><td class="n">' + fmtTrend(t2) + '</td></tr>' +
-        '<tr><td>涉及人员</td><td class="n">' + pc(curWd) + ' 人</td><td class="n">' + (prevP === null ? '--' : prevP + ' 人') + '</td><td class="n">' + fmtTrend(t3) + '</td></tr>' +
-        '</tbody></table>';
+    if (!weeks4.length) weeks4 = [wd];
+    var hasCur = false;
+    weeks4.forEach(function(wk) { if (wk.monday.getTime() === wd.monday.getTime()) hasCur = true; });
+    if (!hasCur) weeks4 = weeks4.slice(-3).concat([wd]);   // 保证当前周在末位（旧→新，柱图最右=本周）
+    // 每档各人失误计数（与 top3 同源 monthDimRows：维度+站点规则逐周应用）
+    var wkMaps = weeks4.map(function(wk) {
+        var per = {};
+        monthDimRows(dimId, wk).forEach(function(e) {
+            var nm2 = fixPanZeName(e.reviewer) || '';
+            if (nm2) per[nm2] = (per[nm2] || 0) + 1;
+        });
+        return per;
+    });
+    var topArr = Object.keys(cnt).map(function(nm) {
+        var r = cnt[nm];
+        return { name: nm, n: r.n, src: r.src, cats: r.cats, prods: r.prods, site: SITE_MAP[nm] || '', wk: wkMaps.map(function(m) { return m[nm] || 0; }) };
+    }).sort(function(a, b) { return b.n - a.n; });
+    if (!topArr.length) return '';
+    var top3 = topArr.slice(0, 3);
+    var tieN = 0;
+    for (var t4 = 3; t4 < topArr.length; t4++) { if (topArr[t4].n === top3[top3.length - 1].n) tieN++; else break; }
+    var topMax = top3[0].n;
+    var showSite = currentSite === 'all';   // 全部站点视图人名带主站标；单站视图不加（冗余）
+    var rankColors = ['#c0392b', '#e67e22', '#f1c40f'];
+    var rankTxtCls = ['#fff', '#fff', '#6b5900'];
+    var srcCls = function(s) { return s === '初审' ? 'cs' : (s === '抽检' ? 'cj' : 'qa'); };
+    // 对象（类别/品类计数）转降序数组
+    function cntArr(o) {
+        return Object.keys(o).map(function(k) { return { k: k, n: o[k] }; }).sort(function(a, b) { return b.n - a.n; });
+    }
+    function chip(s, n, extra) {
+        return '<span style="display:inline-block;background:#f1f5f9;color:#334155;padding:1px 7px;border-radius:10px;font-size:0.72rem;line-height:1.7;margin:0 4px 3px 0;' + (extra || '') + '">' + s + (n > 1 ? '×' + n : '') + '</span>';
+    }
+    // 类别 chip（2026-09-07 用户定）：条数>1（带 ×N）的按 红→橙→黄 渐变热力着色——失误越多越偏红、
+    // 越少越偏黄，填充用淡色（低饱和亮底）配同色系深字；单条（无 ×N）一律白底灰字不参与热力
+    function catChip(s, n, maxN) {
+        var tag = s + (n > 1 ? '×' + n : '');
+        if (n <= 1) {
+            return '<span style="display:inline-block;background:#fff;color:#475569;border:1px solid #e2e8f0;padding:1px 7px;border-radius:10px;font-size:0.72rem;line-height:1.6;margin:0 4px 3px 0;">' + tag + '</span>';
+        }
+        var hue = Math.max(0, Math.min(55, Math.round(55 * (1 - (maxN > 0 ? n / maxN : 0)))));
+        var l = Math.round(66 + hue * 0.14);   // 淡色填充：红端 66% 亮 → 黄端 74% 亮
+        return '<span style="display:inline-block;background:hsl(' + hue + ',60%,' + l + '%);color:hsl(' + hue + ',70%,30%);border:1px solid hsl(' + hue + ',60%,' + (l - 12) + '%);padding:1px 7px;border-radius:10px;font-size:0.72rem;line-height:1.6;margin:0 4px 3px 0;font-weight:600;">' + tag + '</span>';
+    }
+    var cardHtml = '';
+    top3.forEach(function(p, i) {
+        // —— 类别构成（该人全部类别计数，前 8 类；超出压缩为「等N类」；chip 底色=红橙黄热力渐变，
+        // 条数越多越红越深）——
+        var catsA = cntArr(p.cats);
+        var catsHtml = '';
+        catsA.slice(0, 5).forEach(function(c) { catsHtml += catChip(c.k, c.n, catsA[0].n); });
+        if (catsA.length > 5) catsHtml += chip('等' + (catsA.length - 5) + '类', 0);
+        if (!catsHtml) catsHtml = '<span style="color:#94a3b8;">--</span>';
+        // —— 来源构成（恒显一行，三卡行位一致；单源维度也显示该来源计数）——
+        var srcA = cntArr(p.src);
+        var srcHtml = '';
+        srcA.forEach(function(s3) {
+            srcHtml += '<span class="source-tag ' + srcCls(s3.k) + '" style="margin:0 4px 2px 0;">' + s3.k + (s3.n > 1 ? '×' + s3.n : '') + '</span>';
+        });
+        if (!srcHtml) srcHtml = '<span style="color:#94a3b8;">--</span>';
+        // —— 品类构成（前 6 品，超出压缩）——
+        var prodsA = cntArr(p.prods);
+        var prodsHtml = '';
+        prodsA.slice(0, 4).forEach(function(q) { prodsHtml += chip(q.k, q.n); });
+        if (prodsA.length > 4) prodsHtml += chip('等' + (prodsA.length - 4) + '品', 0);
+        if (!prodsHtml) prodsHtml = '<span style="color:#94a3b8;">--</span>';
+        // —— 占比 + 主站标（日期范围 2026-09-07 用户定移除）——
+        var share = Math.round(p.n / rows.length * 100);
+        var barW = Math.max(4, Math.round(p.n / topMax * 100));
+        var siteHtml = (showSite && p.site) ? ' <span class="site-tag">' + p.site + '</span>' : '';
+        // —— 近 4 周对比柱（旧→新，最右=本周用卡主题深色；柱顶显示每周失误数字，2026-09-07 用户定）——
+        var curBarC = (i === 2) ? '#ca8a04' : rankColors[i];   // 第 3 名主题黄太浅，柱用深黄
+        var wkMax = Math.max.apply(null, p.wk.concat([1]));
+        var barsHtml = '';
+        p.wk.forEach(function(c, wi) {
+            var isCur = wi === p.wk.length - 1;
+            var h = c > 0 ? Math.max(3, Math.round(c / wkMax * 14)) : 2;
+            var col = c > 0 ? (isCur ? curBarC : '#a5b4cb') : '#e2e8f0';
+            var numCol = c > 0 ? col : '#cbd5e1';
+            var lbl = formatShortDate(weeks4[wi].monday) + '起 ' + c + ' 条';
+            barsHtml += '<div title="' + lbl + '" style="flex:1;min-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">' +
+                '<span style="font-size:0.64rem;line-height:1.05;color:' + numCol + ';font-weight:' + (c > 0 ? 700 : 400) + ';margin-bottom:1px;">' + c + '</span>' +
+                '<span style="display:block;width:100%;height:' + h + 'px;border-radius:2px;background:' + col + ';"></span>' +
+                '</div>';
+        });
+        // 卡内信息区改版（2026-09-07 用户定）：
+        // - 失误类别行全宽在上；来源分布 / 涉及品类 下方并排、各占半宽（名称行在上、内容提行，三卡行线一致）
+        // - 日期范围行已移除；卡片底部全宽=「本周失误明细」表（品类 | 来源 | 失误类别 | 备注 | 质检码）
+        // - 卡片白底（用户定：去掉随名次的淡红/淡橙/淡黄底色），名次区分只靠徽章/数字/柱
+        // —— 先取该人员本周（当前选中周、当前维度/站点口径）逐条错误，生成明细表行 ——
+        var detailHtml = '';
+        var detailN = 0;
+        rows.forEach(function(rw) {
+            if ((fixPanZeName(rw.reviewer) || '') !== p.name) return;
+            detailN++;
+            var pdt = rw.product || '--', sdt = rw.source || '--', cdt = rw.category || '--';
+            var noteRaw = rw.note || '';
+            detailHtml += '<tr>' +
+                '<td style="text-align:center;padding:2px 6px;border-top:1px solid #eef2f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155;">' + pdt + '</td>' +
+                '<td style="text-align:center;padding:2px 6px;border-top:1px solid #eef2f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155;">' + sdt + '</td>' +
+                '<td style="text-align:center;padding:2px 6px;border-top:1px solid #eef2f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155;" title="' + (cdt || '') + '">' + cdt + '</td>' +
+                '<td style="text-align:center;padding:2px 6px;border-top:1px solid #eef2f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;" title="' + (noteRaw || '').replace(/"/g, '&quot;') + '">' + (noteRaw || '--') + '</td></tr>';
+        });
+        cardHtml += '<div style="flex:1;min-width:0;border:1px solid #e2e8f0;border-radius:10px;background:#fff;padding:10px 12px;display:flex;flex-direction:column;">' +
+            // 卡头：名次徽章 + 姓名 + 主站标
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+            '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:' + rankColors[i] + ';color:' + rankTxtCls[i] + ';font-size:0.74rem;font-weight:700;flex-shrink:0;">' + (i + 1) + '</span>' +
+            '<span style="font-weight:700;color:#1e293b;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">' + p.name + siteHtml + '</span>' +
+            '</div>' +
+            // 上半部两栏 flex:1 平分卡片（2026-09-07 用户定）——
+            // 左栏=N 条·占全量% + 其下进度条（按第 1 名满条）；右栏=近 4 周对比柱（每周数字在柱顶）
+            '<div style="display:flex;gap:14px;margin-bottom:9px;">' +
+            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:5px;">' +
+            '<span style="font-size:1.35rem;font-weight:800;color:' + rankColors[i] + ';line-height:1.15;">' + p.n + '</span>' +
+            '<span style="font-size:0.72rem;color:#64748b;white-space:nowrap;">条 · 占全量 ' + share + '%</span>' +
+            '</div>' +
+            '<div style="height:6px;background:rgba(148,163,184,0.25);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + barW + '%;background:' + rankColors[i] + ';border-radius:3px;"></div></div>' +
+            '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:0.64rem;color:#64748b;margin-bottom:3px;white-space:nowrap;">近 4 周对比</div>' +
+            '<div style="display:flex;align-items:flex-end;gap:2px;height:28px;">' + barsHtml + '</div>' +
+            '</div>' +
+            '</div>' +
+            // 信息区（虚线分割）：失误类别 / 来源分布 / 涉及品类 三块各自浅灰底卡分隔，视觉易区分
+            // （2026-09-07 用户定）；三卡对应行同一水平线：各内容槽等高 min-height:48px（≈2 行 chip）
+            '<div style="border-top:1px dashed rgba(148,163,184,0.4);padding-top:8px;font-size:0.72rem;">' +
+            '<div style="background:#f8fafc;border:1px solid #eef2f7;border-radius:6px;padding:6px 9px;">' +
+            '<div style="color:#1e293b;font-weight:600;margin-bottom:2px;">失误类别</div>' +
+            '<div style="min-height:48px;color:#334155;">' + catsHtml + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;margin-top:7px;align-items:flex-start;">' +
+            '<div style="flex:1;min-width:0;background:#f8fafc;border:1px solid #eef2f7;border-radius:6px;padding:6px 9px;">' +
+            '<div style="color:#1e293b;font-weight:600;margin-bottom:2px;">来源分布</div>' +
+            '<div style="min-height:48px;">' + srcHtml + '</div>' +
+            '</div>' +
+            '<div style="flex:1;min-width:0;background:#f8fafc;border:1px solid #eef2f7;border-radius:6px;padding:6px 9px;">' +
+            '<div style="color:#1e293b;font-weight:600;margin-bottom:2px;">涉及品类</div>' +
+            '<div style="min-height:48px;color:#334155;">' + prodsHtml + '</div>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            // 本周失误明细表（底部全宽，内容居中显示，2026-09-07 用户定）：
+            // 列宽 品类15% + 来源15% = 30% 平分；失误类别25%；备注45%（质检码列已按用户要求移除）
+            '<div style="margin-top:7px;font-size:0.72rem;">' +
+            '<div style="color:#1e293b;font-weight:600;margin-bottom:3px;">📋 本周失误明细<span style="color:#94a3b8;font-weight:400;"> 共 ' + detailN + ' 条</span></div>' +
+            '<div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">' +
+            '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">' +
+            '<thead><tr style="background:#f1f5f9;">' +
+            '<th style="text-align:center;padding:3px 6px;color:#475569;font-weight:600;font-size:0.68rem;width:15%;">品类</th>' +
+            '<th style="text-align:center;padding:3px 6px;color:#475569;font-weight:600;font-size:0.68rem;width:15%;">来源</th>' +
+            '<th style="text-align:center;padding:3px 6px;color:#475569;font-weight:600;font-size:0.68rem;width:25%;">失误类别</th>' +
+            '<th style="text-align:center;padding:3px 6px;color:#475569;font-weight:600;font-size:0.68rem;width:45%;">备注</th>' +
+            '</tr></thead>' +
+            '<tbody>' + detailHtml + '</tbody>' +
+            '</table>' +
+            '</div></div>' +
+            '</div>';
+    });
+    var topTitle = (dimDesc === '三来源') ? '⚠️ 失误人员 Top3' : '⚠️ ' + dimDesc + ' · 失误人员 Top3';
+    var shotLabel = (dimDesc === '三来源') ? '失误人员Top3' : dimDesc + '失误人员Top3';
+    var tieHtml = tieN > 0
+        ? '<div style="margin-top:6px;font-size:0.72rem;color:#94a3b8;">另有 ' + tieN + ' 人与第 3 名并列（各 ' + top3[2].n + ' 条），卡片仅展示前 3 名</div>'
+        : '';
+    return '<div id="errTopSec" style="margin-top:14px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;padding:10px 12px 9px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px;">' +
+        '<div style="font-weight:600;color:var(--primary);">' + topTitle + '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<span style="font-size:0.72rem;color:#94a3b8;">失误 ' + topArr.length + ' 人 · 共 ' + topTot + ' 条</span>' +
+        '<button class="btn btn-sm shot-hide-btn" onclick="screenshotSection(\'errTopSec\',\'' + shotLabel + '\')" title="只截图本模块（3 张深度分析卡），随当前维度联动">📸 截此表</button>' +
+        '</div></div>' +
+        '<div style="display:flex;gap:10px;align-items:stretch;">' + cardHtml + '</div>' + tieHtml + '</div>';
 }
 
-// ===== 周明细行手动隐藏（2026-09-05：全量展示 + 人工✕隐藏，localStorage 长期记住）=====
-// 行唯一标识：周期内 日期|人员|质检码|类别|品类
+// ===== 周明细行手动隐藏（2026-09-07：合并行整组隐藏，localStorage 长期记住）=====
+// 行唯一标识（旧 Tab 版逐行记录用，兼容历史隐藏）：周期内 日期|人员|质检码|类别|品类
 function errRowKey(e) {
     return [e.dateStr || formatDate(e.date), e.reviewer || '', e.qcCode || '', e.category || '', e.product || ''].join('|').toLowerCase();
 }
@@ -2110,14 +2402,16 @@ function buildDimCompareTable(dimId, srcSeries, curWd, prevWd, curStat, prevStat
     return '<table class="cmp-table cmp-trans"><thead>' + thead + '</thead><tbody>' + rowsHtml + '</tbody></table>';
 }
 
-// 失误类别排比卡（全类别，含较上月 ↑↓/新增/持平）——维度通用
-function buildTopListCard(curStat, prevStat) {
+// 失误类别排比卡（全类别，含较上周/较上月 ↑↓/新增/持平）——周月维度通用（2026-09-07 uw 参数化）
+function buildTopListCard(curStat, prevStat, uw) {
     var prevMap = {};
     if (prevStat) prevStat.cats.forEach(function(c) { prevMap[c.name] = c.count; });
     var curTotal = curStat.total;
-    var html = '<div class="error-toplist"><div class="et-title" style="text-align:center;">📈 失误类别排比（全类别 · 较上月）</div>';
+    var curWord = (uw && uw.cur) ? uw.cur : '本月';
+    var prevWord = (uw && uw.prev) ? uw.prev : '上月';
+    var html = '<div class="error-toplist"><div class="et-title" style="text-align:center;">📈 失误类别排比（全类别 · 较' + prevWord + '）</div>';
     if (curStat.cats.length === 0) {
-        html += '<div class="text-muted text-sm">本月无失误记录</div>';
+        html += '<div class="text-muted text-sm">' + curWord + '无失误记录</div>';
     } else {
         curStat.cats.forEach(function(c, i) {
             var pct = curTotal > 0 ? (c.count / curTotal * 100).toFixed(2) : 0;
@@ -2224,13 +2518,102 @@ function buildWeekTrendCard(rows, cats, wd, accent) {
     return html + '</div>';
 }
 
-function renderErrorMonthly(curWd, prevWd) {
+// 周度失误走势卡（周视图专用：排比卡右侧并排，最近4周档按类别对比，2026-09-07 用户需求）
+// 横轴 = 随选中周档移动的 4 个完整周周期（getCurIndex() 起往前 4 档，取自 window._allWeeksCache——
+// renderPersonTable 渲染时已将其刷新为当前全部窗口）；各周档按当前联动维度（dimId=monthErrDim）
+// 独立统计各类别失误条数（monthDimStat 复用周窗过滤+站点+类别规则）；类别行序=当前档类别榜（与左侧排比卡同序）。
+// 与 KPI 表头同口径：列名=真实周期周号（如「8月第3周」），随选中周档移动；选中档恒在第 1 列（页内选中=“本周”语义）。
+function buildWeekSeqTrendCard(dimId, curStat, accent) {
+    // 颜色深浅：0.08(浅)~0.93(最深)，对应 v/gMax（与 buildWeekTrendCard 同款）
+    function withAlpha(hex, a) {
+        var n = parseInt(hex.slice(1), 16);
+        return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a.toFixed(2) + ')';
+    }
+    var all = window._allWeeksCache || [];
+    var from = getCurIndex();
+    var weeks = [];
+    for (var i = 0; i < 4 && from + i < all.length; i++) {
+        var wd = all[from + i];
+        if (!wd || !wd.monday) break;
+        var st = monthDimStat(dimId, wd);
+        var mp = {};
+        st.cats.forEach(function(c) { mp[c.name] = c.count; });
+        weeks.push({ wd: wd, total: st.total, map: mp });
+    }
+    if (weeks.length === 0) return '';
+
+    // 跨 4 档最大格值（归一化深浅）+ 周期峰值周
+    var gMax = 0, peakW = 0;
+    weeks.forEach(function(w, wi) {
+        Object.keys(w.map).forEach(function(c) { if (w.map[c] > gMax) gMax = w.map[c]; });
+        if (w.total > weeks[peakW].total) peakW = wi;
+    });
+
+    var gtc = 'grid-template-columns:92px repeat(' + weeks.length + ',1fr);';
+    var html = '<div class="error-weektrend">' +
+        '<div class="ewt-title" style="text-align:center;">📅 周度失误走势（按类别 · 最近4周）</div>';
+
+    // 表头：周期周号 + 周一日期（列 1 = 选中周档；hover 显示完整区间）
+    html += '<div class="ewt-grid" style="' + gtc + '"><div class="ewt-h">类别</div>';
+    weeks.forEach(function(w) {
+        html += '<div class="ewt-h" title="' + formatDate(w.wd.monday) + ' ~ ' + formatDate(w.wd.sunday) + '">' +
+            '<div>' + getPeriodLabel(w.wd) + '</div><div class="ewt-date">' + formatShortDate(w.wd.monday) + '起</div></div>';
+    });
+    html += '</div>';
+
+    if (!curStat || !curStat.cats || curStat.cats.length === 0) {
+        html += '<div class="text-muted text-sm" style="padding:8px 0;">本周无失误记录</div>';
+    } else {
+        // 每行=一个类别（与左侧排比卡同序），格子=该类别当周条数；底色越深条数越多；行内峰值描边
+        curStat.cats.forEach(function(c) {
+            var rowMax = 0;
+            weeks.forEach(function(w) { var v = w.map[c.name] || 0; if (v > rowMax) rowMax = v; });
+            html += '<div class="ewt-grid" style="' + gtc + '">' +
+                '<div class="ewt-name" title="' + c.name + '">' + c.name + '</div>';
+            weeks.forEach(function(w) {
+                var v = w.map[c.name] || 0;
+                var a = gMax > 0 ? (v / gMax * 0.85 + 0.08) : 0;
+                var bg = v > 0 ? withAlpha(accent, a) : 'transparent';
+                var col = v > 0 ? (a >= 0.55 ? '#fff' : '#1e293b') : '#cbd5e1';
+                var peak = (v > 0 && rowMax > 1 && v === rowMax) ? 'outline:1px solid rgba(0,0,0,0.35);outline-offset:-1px;' : '';
+                html += '<div class="ewt-cell" style="background:' + bg + ';color:' + col + ';' + peak + '">' + v + '</div>';
+            });
+            html += '</div>';
+        });
+    }
+
+    // 口径说明行
+    var notes = ['对比最近 ' + weeks.length + ' 个完整周周期'];
+    if (gMax > 1) notes.push('格子颜色越深 = 该类当周条数越多');
+    if (weeks[peakW].total > 0) notes.push('周期峰值：' + getPeriodLabel(weeks[peakW].wd) + '（' + formatShortDate(weeks[peakW].wd.monday) + '起 · 共' + weeks[peakW].total + '条）');
+    notes.push('随周档下拉/◀▶联动（选中档恒为第1列，口径同 KPI 表头）');
+    html += '<div class="ewt-note">' + notes.join(' · ') + '</div>';
+    return html + '</div>';
+}
+
+// ===== 失误分析统一渲染（2026-09-07：周/月同构，替代原 renderErrorMonthly）=====
+// 周与月共用同一套布局：顶部 5 张等宽卡（初审/抽检/QA + 明显失误/低级·投诉失误，规则见 MONTH_DIM_CARDS）联动过滤，
+// 默认无选中 = 三来源合计主体（📊 汇总对比转置表 + 📈 全类别排比卡 + 备注区）；
+// 差异仅在主体扩展：月版排比卡右侧多「📅 月内周度失误走势」矩阵（m-flex2 并排）、
+// 周版排比卡右侧多「📅 周度失误走势（最近4周档）」卡（buildWeekSeqTrendCard，随选中周档移动）且下方多
+// 「典型失误订单」合并明细表（buildWeeklyMergedDetail，跨三来源 + 来源列 + 同备注合并）。
+// 备注 key：周不带前缀=旧格式（qc_note_站点_来源_周起点，已存备注不丢）、月带 m_ 前缀隔离；
+// token：来源卡=来源名（旧月度来源 key 一致）、合计='合计'、特殊卡=卡 id。
+function renderDimAnalysis(curWd, prevWd) {
     _mCurWd = curWd;
     _mPrevWd = prevWd;
     if (monthErrDim !== 'all' && !monthDimCard(monthErrDim)) monthErrDim = 'all';
     if (!curWd) return;
 
-    // 预计算各卡本月/上月统计（含合计），一次循环多用
+    var isMonth = viewUnit === 'month';
+    var uw = unitWords(getCurIndex());
+    var prevWord = (uw && uw.prev) ? uw.prev : '上月';   // 月选中上月档时无环比词 → 兜底沿用'上月'
+    var unitTxt = isMonth ? '月' : '周';
+    var notePrefix = isMonth ? 'qc_note_m_' : 'qc_note_';
+    var noteAnalysisId = isMonth ? 'errorAnalysisNoteM' : 'errorAnalysisNote';
+    var noteImproveId = isMonth ? 'errorImproveNoteM' : 'errorImproveNote';
+
+    // 预计算各卡本周期/上一周期统计（含合计），一次循环多用
     var curStatAll = monthDimStat('all', curWd);
     var prevStatAll = prevWd ? monthDimStat('all', prevWd) : null;
     var stats = {};
@@ -2240,7 +2623,7 @@ function renderErrorMonthly(curWd, prevWd) {
     });
 
     var html = '';
-    // —— 顶部 5 张等宽卡（本月数 + 上月/环比小字；点击=只看该维度）——
+    // —— 顶部 5 张等宽卡（本周期数 + 上一周期/环比小字；点击=只看该维度，再点一次返回合计）——
     html += '<div class="dim5-cards">';
     MONTH_DIM_CARDS.forEach(function(dc) {
         var cur = stats[dc.id];
@@ -2254,12 +2637,12 @@ function renderErrorMonthly(curWd, prevWd) {
         html += '<div class="dim5-card' + (sel ? ' dim5-sel' : '') + '" data-dim="' + dc.id + '" title="点击只看「' + dc.label + '」；再点一次返回三来源合计">' +
             '<div class="d5-label"><i style="background:' + dc.accent + '"></i>' + dc.label + '</div>' +
             '<div class="d5-num" style="color:' + dc.accent + '">' + cur.total + '</div>' +
-            '<div class="d5-sub">上月 ' + (prev ? prev.total : '--') + ' 条' + (ttTxt ? ' · ' + ttTxt : '') + '</div>' +
+            '<div class="d5-sub">' + prevWord + ' ' + (prev ? prev.total : '--') + ' 条' + (ttTxt ? ' · ' + ttTxt : '') + '</div>' +
             '</div>';
     });
     html += '</div>';
 
-    // —— 当前维度主体（一套：汇总对比 + 类别排比｜周度走势 + 备注；默认=三来源合计）——
+    // —— 当前维度主体（一套：汇总对比 + 类别排比 + [周度走势/明细] + 备注；默认=三来源合计）——
     var dc = monthErrDim === 'all' ? null : monthDimCard(monthErrDim);
     var dimLabel = dc ? dc.label : '三来源合计';
     var curStat = dc ? stats[dc.id] : curStatAll;
@@ -2268,7 +2651,7 @@ function renderErrorMonthly(curWd, prevWd) {
 
     html += '<div class="dim-hint">' + (dc ? '当前仅看「' + dc.label + '」' : '默认口径：三来源合并统计（整合视图）') + ' · 点上方卡片切换维度，再点一次当前卡返回合计</div>';
 
-    // 合计口径下对比表按来源逐行列出（初审/抽检/QA + 合计）
+    // 合计口径下对比表按来源逐列列出（初审/抽检/QA 带来源色点 + 类别数/涉及人员）
     var srcSeries = [];
     if (monthErrDim === 'all') {
         MONTH_DIM_CARDS.forEach(function(sc) {
@@ -2280,20 +2663,32 @@ function renderErrorMonthly(curWd, prevWd) {
     html += '<div class="error-summary" style="margin-top:4px;"><div class="es-title" style="text-align:center;">📊 汇总对比（' + dimLabel + '）</div>' +
         buildDimCompareTable(monthErrDim, srcSeries, curWd, prevWd, curStat, prevStat) + '</div>';
 
-    html += '<div class="m-flex2">' +
-        buildTopListCard(curStat, prevStat) +
-        buildWeekTrendCard(curStat.rows, curStat.cats, curWd, accent) +
-        '</div>';
+    // 📈 全类别排比（较上周/较上月）：月版与周度走势矩阵并排、周版下方接合并明细表
+    if (isMonth) {
+        html += '<div class="m-flex2">' +
+            buildTopListCard(curStat, prevStat, uw) +
+            buildWeekTrendCard(curStat.rows, curStat.cats, curWd, accent) +
+            '</div>';
+    } else {
+        // 周版：排比卡右侧并排「📅 周度失误走势（最近4周档）」；下方接典型失误订单合并明细表
+        html += '<div class="m-flex2">' +
+            buildTopListCard(curStat, prevStat, uw) +
+            buildWeekSeqTrendCard(monthErrDim, curStat, accent) +
+            '</div>';
+        html += buildWeeklyMergedDetail(monthErrDim, dc, curWd);
+        var errTopHtml = buildErrTop3Module(monthErrDim, dc, curWd);   // ⚠️ 失误人员 Top3 深度分析模块（周版、独立成块）
+    }
 
-    // —— 问题点解析 + 改善方向（随维度分 key 存储；m_ 前缀与周视图隔离；来源维度的 key 与旧版月度一致）——
-    var noteKey = 'qc_note_m_' + currentSite + '_' + (dc ? dc.id : '合计') + '_' + formatDate(curWd.monday);
-    html += '<div style="display:flex;gap:10px;margin-top:12px;">' +
+    // —— 问题点解析 + 改善方向（随维度分 key 存储；周旧 key 兼容、月 m_ 前缀隔离）——
+    var noteKey = notePrefix + currentSite + '_' + (dc ? dc.id : '合计') + '_' + formatDate(curWd.monday);
+    html += '<div id="noteSec" style="display:flex;gap:10px;margin-top:12px;">' +
         '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">🔎 问题点解析</div>' +
-        '<textarea id="errorAnalysisNoteM" data-note-key="' + noteKey + '" placeholder="记录本月' + (dc ? '「' + dc.label + '」' : '') + '失误的问题点分析…" style="width:100%;height:88px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '<textarea id="' + noteAnalysisId + '" data-note-key="' + noteKey + '" placeholder="记录本' + unitTxt + (dc ? '「' + dc.label + '」' : '') + '失误的问题点分析…" style="width:100%;height:88px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
         '<div style="flex:1;"><div style="font-size:0.78rem;font-weight:600;color:var(--primary);margin-bottom:4px;">💡 改善方向</div>' +
-        '<textarea id="errorImproveNoteM" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:88px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
+        '<textarea id="' + noteImproveId + '" data-note-key="' + noteKey + '" placeholder="记录对应的改善措施和方向…" style="width:100%;height:88px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;resize:vertical;outline:none;"></textarea></div>' +
         '</div>';
 
+    if (errTopHtml) html += errTopHtml;   // ⚠️ 失误人员 Top3 独立模块置页底（月版无明细则不出）
     document.getElementById('errorTabContent').innerHTML = html;
 
     // 5 卡点击：单选联动；点当前卡返回合计
@@ -2302,16 +2697,27 @@ function renderErrorMonthly(curWd, prevWd) {
         card.onclick = function() {
             var d = card.dataset.dim;
             monthErrDim = (monthErrDim === d) ? 'all' : d;
-            renderErrorMonthly(_mCurWd, _mPrevWd);
+            renderDimAnalysis(_mCurWd, _mPrevWd);
+        };
+    });
+
+    // 周版明细：✕ 整组隐藏 / 「恢复全部」（同时清理新 merged key 与旧三来源 key）
+    contentEl.querySelectorAll('[data-act="hide"]').forEach(function(btn) {
+        btn.onclick = function() { hideErrRow(btn.dataset.hidKey, btn.dataset.hkey); };
+    });
+    contentEl.querySelectorAll('[data-act="restore"]').forEach(function(btn) {
+        btn.onclick = function() {
+            try { JSON.parse(btn.dataset.restoreKeys || '[]').forEach(function(k) { localStorage.removeItem(k); }); } catch(e) {}
+            refreshView();
         };
     });
 
     // 恢复已保存的问题点解析和改善方向
-    ['errorAnalysisNoteM', 'errorImproveNoteM'].forEach(function(id) {
+    [noteAnalysisId, noteImproveId].forEach(function(id) {
         var ta = document.getElementById(id);
         if (!ta) return;
         var k = ta.dataset.noteKey;
-        var suffix = (id === 'errorAnalysisNoteM') ? '_analysis' : '_improve';
+        var suffix = (id === noteAnalysisId) ? '_analysis' : '_improve';
         var saved = localStorage.getItem(k + suffix);
         if (saved) ta.value = saved;
         ta.oninput = function() { localStorage.setItem(k + suffix, this.value); };
@@ -2320,22 +2726,6 @@ function renderErrorMonthly(curWd, prevWd) {
 
 // 截图功能
 
-// 更新失误Tab标签上的计数
-function updateErrorTabs(weekData) {
-    var cs = weekData.csErrors || 0;
-    var cj = weekData.cjErrors || 0;
-    var qa = weekData.qaErrors || 0;
-    var total = cs + cj + qa;
-    var pct = function(n) { return total > 0 ? (n / total * 100).toFixed(1) + "%" : "0%"; };
-    var tabs = document.querySelectorAll("#errorTabs .tab-btn");
-    tabs.forEach(function(btn) {
-        var tab = btn.dataset.tab;
-        var count = tab === "初审" ? cs : (tab === "抽检" ? cj : qa);
-        btn.innerHTML = tab + '失误 <span style="font-size:0.72rem;opacity:0.75;">(' + count + '条, ' + pct(count) + ')</span>';
-    });
-    var badge = document.getElementById("errorTotalBadge");
-    if (badge) badge.innerHTML = "📋 合计 <b>" + total + "</b> 条";
-}
 
 // 总计行趋势弹窗
 function showTotalTrendPopup() {
@@ -2392,6 +2782,19 @@ function screenshotSection(elementId, label) {
     if (!el) { alert("未找到截图元素"); return; }
     if (typeof html2canvas === "undefined") { alert("html2canvas 未加载，请刷新后重试"); return; }
 
+    // 问题点/改善备注区（#noteSec）截图归属（2026-09-07 用户定）：备注跟「📋 典型失误订单」走——
+    // 🔍 失误分析整区截图：明细块与备注都不出现；📋 明细「截此表」：备注临时移入明细容器同截，截完归位
+    // （页面布局不动，仅截图行为；月版无明细块时备注仍随整区截图，属唯一归属）
+    var hideSec = el.querySelector('#weeklyMergedSec');   // 命中=整区截图（周版含明细块）；明细自身截图时查不到自身
+    var noteSec = document.getElementById('noteSec');
+    var noteHome = (noteSec && noteSec.parentNode) || null;
+    var noteMoved = false;
+    if (hideSec) {
+        if (noteSec) noteSec.style.display = 'none';
+    } else if (el.id === 'weeklyMergedSec' && noteSec && noteHome && noteHome !== el) {
+        el.appendChild(noteSec);   // 备注并入明细截图
+        noteMoved = true;
+    }
     // 截图前把 textarea 替换为 pre，保留换行
     var swaps = [];
     var textareas = el.querySelectorAll('textarea');
@@ -2403,12 +2806,17 @@ function screenshotSection(elementId, label) {
         ta.style.display = 'none';
         swaps.push({ textarea: ta, pre: pre });
     });
-    // 明细行「✕」隐藏按钮列不出现在截图中（2026-09-05）
-    var hideCols = el.querySelectorAll('.shot-hide-col');
+    // 明细行「✕」隐藏按钮列 + 明细块操作按钮（📸截此表/↩️恢复全部）+ 表下灰色说明文字（2026-09-07）不出现在截图中
+    var hideCols = el.querySelectorAll('.shot-hide-col, .shot-hide-btn, .shot-hide-note');
     hideCols.forEach(function(td) { td.style.display = 'none'; });
+    // 整区截图隐藏明细块（2026-09-07 起备注已随明细归属，明细自身截图时 hideSec=null 不触发）
+    if (hideSec) hideSec.style.display = 'none';
     var restoreShots = function() {
         swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
         hideCols.forEach(function(td) { td.style.display = ''; });
+        if (noteMoved && noteHome) noteHome.appendChild(noteSec);   // 备注移回原容器（errorTabContent 末尾）
+        if (noteSec) noteSec.style.display = '';
+        if (hideSec) hideSec.style.display = '';
     };
 
     html2canvas(el, {
@@ -2434,15 +2842,23 @@ function screenshotSection(elementId, label) {
 }
 
 // ==================== 7b. 周报/月报文本自动生成 ====================
+// ===== 报告文本生成（2026-09-07 重构：周=用户定稿新模板 / 月=原月度汇报格式不变）=====
 function generateReportText(weekData, allWeeks) {
     var prevWeekData = (getCurIndex() + 1 < allWeeks.length) ? allWeeks[getCurIndex() + 1] : null;
-    // 环比措辞：周=上周、月=上月（viewUnit=周时两变量即原文案，输出逐字不变）
-    var uwPrev = viewUnit === 'month' ? '上月' : '上周';
-    var isMonth = viewUnit === 'month';
-    var lines = [];
-    lines.push(isMonth ? '核心指标（' + monthLabelOf(weekData.monday) + '）' : '核心指标');
+    if (viewUnit === 'month') return genMonthReportText(weekData, prevWeekData);
+    return genWeekReportText(weekData, prevWeekData);
+}
 
-    // 抽检量（括号内：选定站点、当前周期的全部抽检人按出现次数计数，即线上+实物表G列）
+// ===== 周报文本模板（2026-09-07 用户定稿）=====
+// 1、本周抽检总量：N（各抽检人员：计数 全列）环比上升N台； ——续行 线上/实物（各占比）
+// 2、抽检人效：N/7≈M，环比提升/下降M台；3、判责量：N，环比N台
+// 4、抽检覆盖率(15%)：x%，较上周提升y%；5、抽检准确率(99%)：x%，较上周提升y%
+// 6、失误总量（三来源合计）：N条，环比N条；7、判责准确率(99.5%)：x%，较上周提升y%
+// 8、前三周环比：趋势（数据不足时 8 行为「数据不足」且相关环比句省略）
+function genWeekReportText(weekData, prevWeekData) {
+    var lines = [];
+
+    // 抽检人员计数：线上+实物按人员出现次数统计（括号内全列）
     var personSamplingCount = {};
     samplingData.online.concat(samplingData.physical).forEach(function(s) {
         if (!isInWeek(s.date, weekData.monday, weekData.sunday)) return;
@@ -2454,30 +2870,120 @@ function generateReportText(weekData, allWeeks) {
     var personList = Object.keys(personSamplingCount).map(function(n) { return { name: n, sampling: personSamplingCount[n] }; })
         .sort(function(a, b) { return b.sampling - a.sampling; });
     var topStr = personList.length > 0 ? '  （' + personList.map(function(p) { return p.name + '：' + p.sampling; }).join('  ') + '）' : '';
+
+    var curSampling = weekData.totalSampling;
+    var effCur = Math.round(curSampling / 7);
+    var prevSampling = prevWeekData ? prevWeekData.totalSampling : null;
+    var effPrev = prevWeekData ? Math.round(prevWeekData.totalSampling / 7) : null;
+
+    // —— 1、本周抽检总量 + 线上/实物（占比）——
+    var sDiff = '';
+    if (prevSampling !== null) {
+        var ds = curSampling - prevSampling;
+        if (ds > 0) sDiff = '，环比上升' + ds + '台';
+        else if (ds < 0) sDiff = '，环比下降' + (-ds) + '台';
+        else sDiff = '，环比持平';
+    }
+    lines.push('1、' + (currentWeekIndex === 0 ? '本周抽检总量' : '抽检总量') + '：' + curSampling + topStr + sDiff + '；');
+    var pctOn = curSampling > 0 ? (weekData.onlineCount / curSampling * 100).toFixed(2) : '0.00';
+    var pctPh = curSampling > 0 ? (weekData.physicalCount / curSampling * 100).toFixed(2) : '0.00';
+    lines.push('  线上：' + weekData.onlineCount + '（' + pctOn + '%） 实物：' + weekData.physicalCount + '（' + pctPh + '%）');
+
+    // —— 2、抽检人效 ——
+    var eDiff = '';
+    if (effPrev !== null) {
+        var de = effCur - effPrev;
+        if (de > 0) eDiff = '，环比提升' + de + '台';
+        else if (de < 0) eDiff = '，环比下降' + (-de) + '台';
+        else eDiff = '，环比持平';
+    }
+    lines.push('2、抽检人效：' + curSampling + '/7≈' + effCur + eDiff);
+
+    // —— 3、判责量 ——
+    var jDiff = '';
+    if (prevWeekData) {
+        var dj = weekData.judgmentCount - prevWeekData.judgmentCount;
+        if (dj > 0) jDiff = '，环比上升' + dj + '台';
+        else if (dj < 0) jDiff = '，环比下降' + (-dj) + '台';
+        else jDiff = '，环比持平';
+    }
+    lines.push('3、判责量：' + weekData.judgmentCount + jDiff);
+
+    // —— 4/5/7：比率类指标（覆盖率/抽检准确率/判责准确率）用百分点 diff ——
+    function ratioDiff(cur, prev) {
+        var d = cur - prev;
+        if (d > 0) return '，较上周提升' + d.toFixed(2) + '%';
+        if (d < 0) return '，较上周下降' + (-d).toFixed(2) + '%';
+        return '，与上周持平';
+    }
+    lines.push('4、抽检覆盖率(15%)：' + weekData.coverage.toFixed(2) + '%' + (prevWeekData ? ratioDiff(weekData.coverage, prevWeekData.coverage) : ''));
+    lines.push('5、抽检准确率(99%)：' + weekData.accuracy.toFixed(2) + '%' + (prevWeekData ? ratioDiff(weekData.accuracy, prevWeekData.accuracy) : ''));
+
+    // —— 6、失误总量（三来源合计）——
+    var curErr = (weekData.csErrors || 0) + (weekData.cjErrors || 0) + (weekData.qaErrors || 0);
+    var errDiff = '';
+    if (prevWeekData) {
+        var prevErr = (prevWeekData.csErrors || 0) + (prevWeekData.cjErrors || 0) + (prevWeekData.qaErrors || 0);
+        var dn = curErr - prevErr;
+        if (dn > 0) errDiff = '，环比上升' + dn + '条';
+        else if (dn < 0) errDiff = '，环比下降' + (-dn) + '条';
+        else errDiff = '，环比持平';
+    }
+    lines.push('6、失误总量：' + curErr + '条' + errDiff + '；');
+
+    // —— 7、判责准确率 ——
+    lines.push('7、判责准确率(99.5%)：' + weekData.panZeAccuracy.toFixed(2) + '%' + (prevWeekData ? ratioDiff(weekData.panZeAccuracy, prevWeekData.panZeAccuracy) : ''));
+
+    // —— 8、前三周环比 ——
+    var trendTxt = '数据不足';
+    if (prevWeekData) {
+        var dt = curSampling - prevSampling;
+        if (dt < 0) trendTxt = '呈下降趋势';
+        else if (dt > 0) trendTxt = '呈上升趋势';
+        else trendTxt = '整体平稳';
+    }
+    lines.push('8、前三周环比：' + trendTxt);
+    return lines.join('\n');
+}
+
+// ===== 月报文本（2026-09-05 月度汇报风格，逐字保持原输出）=====
+function genMonthReportText(weekData, prevWeekData) {
+    var lines = [];
+    lines.push('核心指标（' + monthLabelOf(weekData.monday) + '）');
+
+    // 抽检人员计数（同周口径：线上+实物合并，括号内全列）
+    var personSamplingCount = {};
+    samplingData.online.concat(samplingData.physical).forEach(function(s) {
+        if (!isInWeek(s.date, weekData.monday, weekData.sunday)) return;
+        if (!siteMatch(s, currentSite)) return;
+        var nm = fixPanZeName(s.sampler);
+        if (!nm) return;
+        personSamplingCount[nm] = (personSamplingCount[nm] || 0) + 1;
+    });
+    var personList = Object.keys(personSamplingCount).map(function(n) { return { name: n, sampling: personSamplingCount[n] }; })
+        .sort(function(a, b) { return b.sampling - a.sampling; });
+    var topStr = personList.length > 0 ? '  （' + personList.map(function(p) { return p.name + '：' + p.sampling; }).join('  ') + '）' : '';
+
     var samplingDiff = '';
     if (prevWeekData) {
         var ds = weekData.totalSampling - prevWeekData.totalSampling;
-        if (ds > 0) samplingDiff = ' 较' + uwPrev + '上升' + ds + '台';
-        else if (ds < 0) samplingDiff = ' 较' + uwPrev + '下降' + (-ds) + '台';
-        else samplingDiff = ' 与' + uwPrev + '持平';
+        if (ds > 0) samplingDiff = ' 较上月上升' + ds + '台';
+        else if (ds < 0) samplingDiff = ' 较上月下降' + (-ds) + '台';
+        else samplingDiff = ' 与上月持平';
     }
     lines.push('1、抽检量：' + weekData.totalSampling + topStr + samplingDiff);
     lines.push('  线上：' + weekData.onlineCount + '  实物：' + weekData.physicalCount);
-    // 人效口径：周=抽检量/7；月=抽检量/当月有效抽检天数（与KPI表一致）
-    if (viewUnit === 'month') {
-        var actDays = Math.max(1, weekData.activeDays || 1);
-        lines.push('  日均人效：有效抽检' + weekData.activeDays + '天，日均≈' + Math.round(weekData.totalSampling / actDays) + '台');
-    } else {
-        lines.push('  抽检人效：' + weekData.totalSampling + '/7≈' + Math.round(weekData.totalSampling / 7));
-    }
+    // 人效口径：月=抽检量/当月有效抽检天数（与KPI表一致）
+    var actDays = Math.max(1, weekData.activeDays || 1);
+    lines.push('  日均人效：有效抽检' + weekData.activeDays + '天，日均≈' + Math.round(weekData.totalSampling / actDays) + '台');
 
     // 判责量
     var jzDiff = '';
     if (prevWeekData) {
         var dj = weekData.judgmentCount - prevWeekData.judgmentCount;
-        if (dj > 0) jzDiff = '，较' + uwPrev + '上升' + dj + '台';
-        else if (dj < 0) jzDiff = '，较' + uwPrev + '下降' + (-dj) + '台';
-        else jzDiff = '，与' + uwPrev + '持平';
+        if (dj > 0) jzDiff = '，较上月上升' + dj + '台';
+        else if (dj < 0) jzDiff = '，较上月下降' + (-dj) + '台';
+        else jzDiff = '，与上月持平';
     }
     lines.push('2、判责量：' + weekData.judgmentCount + jzDiff);
 
@@ -2485,9 +2991,9 @@ function generateReportText(weekData, allWeeks) {
     var covDiff = '';
     if (prevWeekData) {
         var dc = weekData.coverage - prevWeekData.coverage;
-        if (dc > 0) covDiff = '，较' + uwPrev + '提升' + dc.toFixed(2) + '%';
-        else if (dc < 0) covDiff = '，较' + uwPrev + '下降' + (-dc).toFixed(2) + '%';
-        else covDiff = '，与' + uwPrev + '持平';
+        if (dc > 0) covDiff = '，较上月提升' + dc.toFixed(2) + '%';
+        else if (dc < 0) covDiff = '，较上月下降' + (-dc).toFixed(2) + '%';
+        else covDiff = '，与上月持平';
     }
     lines.push('3、抽检覆盖率：' + weekData.coverage.toFixed(2) + '%' + covDiff);
 
@@ -2495,13 +3001,13 @@ function generateReportText(weekData, allWeeks) {
     var accDiff = '';
     if (prevWeekData) {
         var da = weekData.accuracy - prevWeekData.accuracy;
-        if (da > 0) accDiff = '，较' + uwPrev + '提升' + da.toFixed(2) + '%';
-        else if (da < 0) accDiff = '，较' + uwPrev + '下降' + (-da).toFixed(2) + '%';
-        else accDiff = '，与' + uwPrev + '持平';
+        if (da > 0) accDiff = '，较上月提升' + da.toFixed(2) + '%';
+        else if (da < 0) accDiff = '，较上月下降' + (-da).toFixed(2) + '%';
+        else accDiff = '，与上月持平';
     }
     lines.push('4、抽检准确率：' + weekData.accuracy.toFixed(2) + '%' + accDiff);
 
-    // 环比小结：周=前三周环比（只看选中周vs上周的抽检量）；月=本月vs上月趋势小结（月度汇报风格）
+    // 趋势小结（月汇报风格：带两侧周期与抽检量）
     var trendTxt = '数据不足';
     if (prevWeekData) {
         var dt = weekData.totalSampling - prevWeekData.totalSampling;
@@ -2509,16 +3015,11 @@ function generateReportText(weekData, allWeeks) {
         else if (dt > 0) trendTxt = '呈上升趋势';
         else trendTxt = '整体平稳';
     }
-    if (viewUnit === 'month') {
-        var prevLbl = getPeriodLabel(prevWeekData || weekData);
-        var curLbl = getPeriodLabel(weekData);
-        var base = (trendTxt === '数据不足') ? '数据不足'
-            : '较上月抽检量' + trendTxt + '（' + prevLbl + '：' + (prevWeekData ? prevWeekData.totalSampling : 0) + '台 → ' + curLbl + '：' + weekData.totalSampling + '台）';
-        lines.push('5、趋势小结：' + base);
-    } else {
-        lines.push('5、前三周环比：' + trendTxt);
-    }
-
+    var prevLbl = getPeriodLabel(prevWeekData || weekData);
+    var curLbl = getPeriodLabel(weekData);
+    var base = (trendTxt === '数据不足') ? '数据不足'
+        : '较上月抽检量' + trendTxt + '（' + prevLbl + '：' + (prevWeekData ? prevWeekData.totalSampling : 0) + '台 → ' + curLbl + '：' + weekData.totalSampling + '台）';
+    lines.push('5、趋势小结：' + base);
     return lines.join('\n');
 }
 
@@ -2626,9 +3127,6 @@ function applyUnitChrome() {
     var shotReport = document.getElementById('btnShotReport');
     if (shotReport) shotReport.title = isMonth ? '截图月报文本' : '截图周报文本';
     document.getElementById('personTrendTh').textContent = isMonth ? '周期趋势' : '四周趋势';
-    // 失误分析：周=三来源互斥Tab；月=三来源纵排整块（隐藏Tab与合计徽章，见 renderErrorAnalysis）
-    document.getElementById('errorTabs').style.display = isMonth ? 'none' : '';
-    document.getElementById('errorTotalBadge').style.display = isMonth ? 'none' : '';
 }
 
 // 周 ↔ 月维度切换（月模式首次进入时数据不足 → 顶部轻提示 + 后台补拉）
@@ -2651,7 +3149,6 @@ function refreshView() {
     var weeks = computeAllWeeks(allErrors, samplingData, panZeRecords, periods, currentSite);
     var weekData = weeks[getCurIndex()];
     renderAll(weekData, weeks);
-    updateErrorTabs(weekData);
     // 更新站点筛选按钮激活态
     document.querySelectorAll('#siteFilter .site-filter-btn').forEach(function(btn) {
         btn.classList.remove('active', 'sz-active', 'qd-active', 'cd-active');
@@ -2811,15 +3308,6 @@ function setupEventListeners() {
         };
     });
 
-    // Tab切换
-    document.querySelectorAll('#errorTabs .tab-btn').forEach(function(btn) {
-        btn.onclick = function() {
-            document.querySelectorAll('#errorTabs .tab-btn').forEach(function(b) { b.classList.remove('active'); });
-            this.classList.add('active');
-            activeErrorTab = this.dataset.tab;
-            refreshView();
-        };
-    });
 
 }
 
