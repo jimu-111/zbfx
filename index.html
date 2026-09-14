@@ -1987,7 +1987,7 @@ function buildWeeklyMergedDetail(dimId, dc, curWd) {
     var restoreHtml = (hiddenN > 0
         ? '<button class="btn btn-sm shot-hide-btn" data-act="restore" data-restore-keys="' + JSON.stringify([newKey].concat(oldKeys)).replace(/"/g, '&quot;') + '" title="恢复本周期全部已隐藏订单">↩️ 恢复全部</button>'
         : '');
-    var html = '<div style="margin-top:16px;" id="weeklyMergedSec">' +
+    var html = '<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;padding:10px 12px 9px;" id="weeklyMergedSec">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
         '<div style="font-weight:600;color:var(--primary);">' + titleTxt + '</div>' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
@@ -2791,12 +2791,15 @@ function screenshotSection(elementId, label) {
     if (!el) { alert("未找到截图元素"); return; }
     if (typeof html2canvas === "undefined") { alert("html2canvas 未加载，请刷新后重试"); return; }
 
-    // 问题点/改善备注区（#noteSec）截图归属（2026-09-07 用户定）：备注跟「📋 典型失误订单」走——
-    // 🔍 失误分析整区截图：明细块与备注都不出现；📋 明细「截此表」：备注临时移入明细容器同截，截完归位
-    // （页面布局不动，仅截图行为；月版无明细块时备注仍随整区截图，属唯一归属）
+    // 三模块截图隔离（2026-09-14 用户定）：失误分析 / 典型失误订单 / 失误人员Top3 各自只截自己的小模块
+    // - 🔍 失误分析整区截图：明细块、备注、Top3 都不出现
+    // - 📋 典型失误订单「截此表」：备注临时移入同截（2026-09-07 用户定归属），截完按原位插回
+    // - ⚠️ Top3「截此表」：只含 3 张卡片（备注/明细都不影响）
     var hideSec = el.querySelector('#weeklyMergedSec');   // 命中=整区截图（周版含明细块）；明细自身截图时查不到自身
+    var hideTop = el.querySelector('#errTopSec');         // 命中=整区截图不含 Top3；Top3 自身截图时查不到自身
     var noteSec = document.getElementById('noteSec');
     var noteHome = (noteSec && noteSec.parentNode) || null;
+    var noteNext = (noteSec && noteSec.nextSibling) || null;   // 原位锚点（避免 appendChild 把备注挪到 Top3 之后）
     var noteMoved = false;
     if (hideSec) {
         if (noteSec) noteSec.style.display = 'none';
@@ -2818,14 +2821,20 @@ function screenshotSection(elementId, label) {
     // 明细行「✕」隐藏按钮列 + 明细块操作按钮（📸截此表/↩️恢复全部）+ 表下灰色说明文字（2026-09-07）不出现在截图中
     var hideCols = el.querySelectorAll('.shot-hide-col, .shot-hide-btn, .shot-hide-note');
     hideCols.forEach(function(td) { td.style.display = 'none'; });
-    // 整区截图隐藏明细块（2026-09-07 起备注已随明细归属，明细自身截图时 hideSec=null 不触发）
+    // 整区截图隐藏明细块与 Top3 模块（2026-09-14：三模块截图各自独立）
     if (hideSec) hideSec.style.display = 'none';
+    if (hideTop) hideTop.style.display = 'none';
     var restoreShots = function() {
         swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
         hideCols.forEach(function(td) { td.style.display = ''; });
-        if (noteMoved && noteHome) noteHome.appendChild(noteSec);   // 备注移回原容器（errorTabContent 末尾）
+        if (noteMoved && noteHome) {
+            // 备注插回原位（Top3 之前）；锚点漂移则退回追加
+            if (noteNext && noteNext.parentNode === noteHome) noteHome.insertBefore(noteSec, noteNext);
+            else noteHome.appendChild(noteSec);
+        }
         if (noteSec) noteSec.style.display = '';
         if (hideSec) hideSec.style.display = '';
+        if (hideTop) hideTop.style.display = '';
     };
 
     html2canvas(el, {
