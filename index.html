@@ -333,7 +333,9 @@ tr.row-err-mid td { background: #fde8e8 !important; }
 // ==================== 1. 配置常量 ====================
 const FEISHU_CONFIG = {
     appId: 'cli_aab1fa4e87bbdbd3',
-    appSecret: '1uLKmOkzQpoac6Ixw3Qhsb6KR1gCrcTn',
+    // 2026-09-20：明文密钥已清空。真值由代理层注入（Cloudflare 环境变量 FEISHU_APP_SECRET）。
+    // ⚠️ 字段必须保留（哪怕空串）—— 代理靠「body 里有 app_secret 字段」才动手，删了就不注入。
+    appSecret: '',
     spreadsheetToken: 'EdI0sn3qkh7H6wtkhcpcxrTnnDf',
     sheets: [
         // 按A列日期定位读5周区间；colEnd=所需最右列，列范围收窄减少传输量
