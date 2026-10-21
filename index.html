@@ -355,7 +355,7 @@ const FEISHU_CONFIG = {
     panZeSheetId: '8pTEgS'
 };
 
-const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','吴尧飞':'深圳','陈佳鹏':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','陆鑫':'青岛','葛玉鹏':'青岛','王世界':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都','刘锐':'成都' };
+const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','吴尧飞':'深圳','陈佳鹏':'深圳','许文欣':'深圳','郭翠辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','陆鑫':'青岛','葛玉鹏':'青岛','王世界':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都','刘锐':'成都' };
 
 const FEISHU_PROXY_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co/functions/v1/feishu-proxy';
 const FEISHU_CLOUDFLARE_PROXY_URL = 'https://feishu-proxy.xuhang1117.workers.dev'; // Cloudflare Worker 代理（2026-09-04）
@@ -2055,6 +2055,522 @@ function buildWeeklyMergedDetail(dimId, dc, curWd) {
     return html;
 }
 
+// ===== 🏷️ 失误详细分析（2026-10-21 用户定：替代原「典型失误订单」模块）=====
+// 一个失误类别一行（失误类别 / 个数 / 占比，不含频发问题点）；点类别 → 明细弹窗
+// （结构/样式对齐优学堂「数据分析 - D. 失误详细分析」及其类别弹窗）；排序=低投→明显→其他→数量降序；
+// 模块自带「📸 截此表」，与其他模块一样只截自己。
+function _ec(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function _ecJs(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+function _errRelColor(v, min, max) {
+    if (!(max > min)) return 'hsl(120,70%,50%)';
+    var ratio = (v - min) / (max - min);
+    return 'hsl(' + (120 * (1 - ratio)) + ',70%,50%)';
+}
+function _errPctBar(pct, minP, maxP) {
+    var c = _errRelColor(pct, minP, maxP);
+    return '<span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">' +
+        '<span style="font-size:0.8rem;font-weight:600;color:' + c + ';">' + pct.toFixed(2) + '%</span>' +
+        '<span style="display:inline-block;width:50px;height:8px;background:#eef2f6;border-radius:4px;overflow:hidden;">' +
+        '<span style="display:block;height:100%;width:' + Math.min(pct, 100) + '%;background:' + c + ';border-radius:4px;"></span></span></span>';
+}
+function _errPriority(cat) {
+    var c = cat || '';
+    if (c.indexOf('低级') >= 0 || c.indexOf('投诉') >= 0) return 0;
+    if (c.indexOf('明显失误') >= 0 || c.indexOf('扣错项') >= 0) return 1;
+    return 2;
+}
+// 频发问题点：类别内跨人员按备注合并（相同/相似 ≥75%/语义等同），取次数最多的一组
+function _errTopIssue(rows) {
+    var gs = [];
+    rows.forEach(function(e) {
+        var note = e.note || '';
+        var g = null;
+        for (var i = 0; i < gs.length; i++) {
+            if (_noteSim(gs[i].note, note) >= 0.75 || _noteSemEq(gs[i].note, note)) { g = gs[i]; break; }
+        }
+        if (!g) { g = { note: note, semName: _noteSemHit(note), n: 0 }; gs.push(g); }
+        g.n++;
+    });
+    gs.sort(function(a, b) { return b.n - a.n; });
+    return gs[0] || null;
+}
+
+function buildErrCategoryModule(dimId, dc, curWd) {
+    var rows = monthDimRows(dimId, curWd);
+    window._errCatRows = rows;   // 供弹窗取明细（随 5 卡联动/切周档同步刷新）
+    var dimDesc = dc ? dc.id : '三来源';
+    var total = rows.length;
+
+    var map = {};
+    rows.forEach(function(e) {
+        var cat = e.category || '(未分类)';
+        if (!map[cat]) map[cat] = { name: cat, n: 0, rows: [] };
+        map[cat].n++;
+        map[cat].rows.push(e);
+    });
+    var list = Object.keys(map).map(function(k) { return map[k]; });
+    // 排序（2026-10-21 用户定）：按个数从多到少上下排列（同数量按类别名稳定排序）
+    list.sort(function(a, b) {
+        if (a.n !== b.n) return b.n - a.n;
+        return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+    });
+
+    var html = '<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;padding:10px 12px 9px;" id="weeklyCategorySec">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+        '<div style="font-weight:600;color:var(--primary);">🏷️ 失误详细分析（' + dimDesc + ' · ' + total + ' 条）</div>' +
+        '<button class="btn btn-sm shot-hide-btn" onclick="screenshotSection(\'weeklyCategorySec\',\'失误详细分析\')" title="只截图本模块（类别汇总），不含下方备注与 Top3">📸 截此表</button>' +
+        '</div>';
+
+    if (total === 0) {
+        html += '<div class="text-muted text-sm" style="padding:16px;text-align:center;">本周期无失误记录</div></div>';
+        return html;
+    }
+
+    var minN = list[list.length - 1].n, maxN = list[0].n;
+    var pcts = list.map(function(it) { return it.n / total * 100; });
+    var minP = Math.min.apply(null, pcts), maxP = Math.max.apply(null, pcts);
+
+    html += '<div class="table-wrap"><table class="data-table" style="table-layout:fixed;">' +
+        '<thead><tr>' +
+        '<th style="width:22%;text-align:center;">失误类别</th>' +
+        '<th style="width:10%;text-align:center;">个数</th>' +
+        '<th style="width:18%;text-align:center;">占比</th>' +
+        '<th style="width:50%;text-align:center;">频发问题点</th>' +
+        '</tr></thead><tbody>';
+    list.forEach(function(it) {
+        var pct = it.n / total * 100;
+        var rowBg = '';
+        if (it.name === '低级/投诉失误' || it.name === '低级失误' || it.name === '投诉失误') rowBg = ' style="background:#f5c6cb;"';
+        else if (it.name === '明显失误' || it.name === '扣错项·明显失误') rowBg = ' style="background:#fde8e8;"';
+        var top = _errTopIssue(it.rows);
+        var topFull = top ? (top.semName || top.note || '') + ' (' + top.n + '次)' : '';
+        var topTxt = top
+            ? '<span style="color:#2a5298;text-decoration:underline;">📌 ' + _ec(top.semName || top.note || '--') + ' (' + top.n + '次)</span>'
+            : '—';
+        html += '<tr' + rowBg + '>' +
+            '<td style="text-align:center;"><span data-cat="' + _ec(it.name) + '" onclick="showErrCategoryModal(this.getAttribute(\'data-cat\'))" style="color:#2a5298;cursor:pointer;text-decoration:underline;font-weight:500;" title="点击查看该类别的明细">🏷️ ' + _ec(it.name) + '</span></td>' +
+            '<td style="text-align:center;"><span style="color:' + _errRelColor(it.n, minN, maxN) + ';font-weight:700;">' + it.n + '</span></td>' +
+            '<td style="text-align:center;">' + _errPctBar(pct, minP, maxP) + '</td>' +
+            '<td style="text-align:center;font-size:0.8rem;color:#334155;cursor:' + (top ? 'pointer' : 'default') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"' + (top ? ' data-cat="' + _ec(it.name) + '" onclick="showErrTopIssueModal(this.getAttribute(\'data-cat\'))"' : '') + ' title="' + _ec(topFull) + '">' + topTxt + '</td>' +
+            '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+    return html;
+}
+
+// —— 弹窗：失误类别明细（照优学堂 showCategoryDetailModal：总计 / 人员 Top5 / 来源分布 / 问题点分布+质检码）——
+// 问题点沿用 zbfx 合并规则：备注相同或相似（编辑距离相似度 ≥75%）或语义等同（备注问题/判错项/传错照片）合并为一条 ×N。
+function _noteNormTxt(s) {
+    return String(s || '').replace(/[\s　。．.、,，·~～\-—]+/g, '').toLowerCase();
+}
+function _noteSim(a, b) {
+    if (a === b) return 1;
+    var m = a.length, n = b.length;
+    if (m === 0 || n === 0) return 0;
+    if (m > n) { var sw = a; a = b; b = sw; var t = m; m = n; n = t; }
+    var prev = [], cur = [];
+    for (var i = 0; i <= m; i++) prev[i] = i;
+    for (var j = 1; j <= n; j++) {
+        cur[0] = j;
+        for (var k = 1; k <= m; k++) {
+            var cost = a.charAt(k - 1) === b.charAt(j - 1) ? 0 : 1;
+            cur[k] = Math.min(prev[k] + 1, cur[k - 1] + 1, prev[k - 1] + cost);
+        }
+        for (var q = 0; q <= m; q++) prev[q] = cur[q];
+    }
+    return 1 - prev[m] / n;
+}
+var _NOTE_SEM_GROUPS = [
+    { name: '备注问题', words: ['无备注', '漏备注', '备注错', '备注错误', '备注写错', '写错备注', '备注填错', '填错备注',
+        '漏写备注', '漏填备注', '忘写备注', '忘记备注', '没写备注', '未写备注',
+        '没备注', '未备注', '忘备注', '备注未填', '备注忘填', '备注没填', '备注漏填'] },
+    { name: '判错项', prefix: true, words: ['判错项', '扣错项'] },
+    { name: '传错照片', prefix: true, words: ['传错照片', '照片传错', '传错图片', '图片传错', '传错相片'] }
+];
+function _noteSemHit(note) {
+    var nn = _noteNormTxt(note);
+    if (!nn) return null;
+    for (var gi = 0; gi < _NOTE_SEM_GROUPS.length; gi++) {
+        var grp = _NOTE_SEM_GROUPS[gi];
+        for (var wi = 0; wi < grp.words.length; wi++) {
+            var w = grp.words[wi];
+            if (nn === w || (grp.prefix && nn.indexOf(w) === 0)) return grp.name;
+        }
+    }
+    return null;
+}
+function _noteSemEq(a, b) {
+    var ha = _noteSemHit(a), hb = _noteSemHit(b);
+    return !!(ha && hb && ha === hb);
+}
+function copyErrQC(text, btn) {
+    var done = function(ok) {
+        if (!btn) return;
+        var old = btn.textContent;
+        btn.textContent = ok ? '✅' : '❌';
+        setTimeout(function() { btn.textContent = old; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() { done(true); }, function() { done(false); });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(true); } catch (e) { done(false); }
+        document.body.removeChild(ta);
+    }
+}
+function showErrCategoryModal(catName) {
+    var rows = (window._errCatRows || []).filter(function(e) { return (e.category || '(未分类)') === catName; });
+    if (!rows.length) return;
+    var total = rows.length;
+    var modalId = 'errCatModal_' + Date.now();
+    var boxId = modalId + '_box';
+
+    function tally(keyFn) {
+        var m = {};
+        rows.forEach(function(e) { var k = keyFn(e); m[k] = (m[k] || 0) + 1; });
+        return Object.keys(m).map(function(k) { return { name: k, n: m[k] }; })
+            .sort(function(a, b) { return b.n - a.n || (a.name < b.name ? -1 : 1); });
+    }
+    var persons = tally(function(e) { return fixPanZeName(e.reviewer) || '(未知)'; });
+    var sources = tally(function(e) { return e.source || '(未知)'; });
+    var cardMinN = persons.length ? persons[persons.length - 1].n : 0;
+    var cardMaxN = persons.length ? persons[0].n : 0;
+
+    function cardRows(arr) {
+        if (!arr.length) return '<tr><td colspan="3" style="padding:12px;text-align:center;color:#999;">暂无数据</td></tr>';
+        var pcts = arr.map(function(it) { return it.n / total * 100; });
+        var minP = Math.min.apply(null, pcts), maxP = Math.max.apply(null, pcts);
+        return arr.map(function(it) {
+            var pct = it.n / total * 100;
+            return '<tr>' +
+                '<td style="padding:6px 10px;text-align:center;font-size:0.85rem;">' + _ec(it.name) + '</td>' +
+                '<td style="padding:6px 10px;text-align:center;font-size:0.85rem;"><span style="color:' + _errRelColor(it.n, minP === maxP ? it.n : minP, maxP) + ';font-weight:700;">' + it.n + '</span></td>' +
+                '<td style="padding:6px 10px;text-align:center;font-size:0.85rem;">' + _errPctBar(pct, minP, maxP) + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    // 问题点：按涉及人员分组，组内按备注相同/相似/语义等同合并（×N）
+    var pGroups = [];
+    persons.forEach(function(p) {
+        var pRows = rows.filter(function(e) { return (fixPanZeName(e.reviewer) || '(未知)') === p.name; });
+        var gs = [];
+        pRows.forEach(function(e) {
+            var note = e.note || '';
+            var g = null;
+            for (var i = 0; i < gs.length; i++) {
+                if (_noteSim(gs[i].note, note) >= 0.75 || _noteSemEq(gs[i].note, note)) { g = gs[i]; break; }
+            }
+            if (!g) { g = { note: note, semName: _noteSemHit(note), list: [] }; gs.push(g); }
+            g.list.push(e);
+        });
+        gs.sort(function(a, b) { return b.list.length - a.list.length; });
+        pGroups.push({ name: p.name, n: p.n, groups: gs });
+    });
+
+    var maxRvPct = pGroups.length ? pGroups[0].n / total * 100 : 0;
+    var colors = ['#e8edf4', '#dce3ed'];
+    var issueRows = '';
+    pGroups.forEach(function(pg, ri) {
+        var bg = colors[ri % 2];
+        var rvPct = total > 0 ? pg.n / total * 100 : 0;
+        pg.groups.forEach(function(g, gi) {
+            var qcs = [];
+            g.list.forEach(function(e) { if (e.qcCode && qcs.indexOf(e.qcCode) < 0) qcs.push(e.qcCode); });
+            var qcHtml = qcs.length
+                ? qcs.map(function(qc) {
+                    return '<span style="display:inline-flex;align-items:center;margin:1px 2px;"><code style="background:#eef2f6;padding:2px 6px;border-radius:4px;font-size:0.7rem;">' + _ec(qc) + '</code></span>';
+                }).join('')
+                : '<span style="color:#cbd5e1;font-size:0.65rem;">—</span>';
+            var prods = [];
+            g.list.forEach(function(e) { var pr = e.product || ''; if (pr && prods.indexOf(pr) < 0) prods.push(pr); });
+            var noteTxt = g.semName || g.note || '--';
+            var nBadge = g.list.length > 1 ? ' <b style="color:#c0392b;">×' + g.list.length + '</b>' : '';
+            var prodTxt = prods.length ? ' <span style="color:#94a3b8;font-size:0.68rem;">[' + _ec(prods.join('/')) + ']</span>' : '';
+            var noteFull = noteTxt + (prods.length ? ' [' + prods.join('/') + ']' : '');
+            issueRows += '<tr style="background:' + bg + ';">' +
+                (gi === 0 ? '<td rowspan="' + pg.groups.length + '" style="padding:8px;text-align:center;vertical-align:middle;font-weight:600;">👤 ' + _ec(pg.name) + '</td>' : '') +
+                '<td style="padding:8px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + _ec(noteFull) + '">' + _ec(noteTxt) + nBadge + prodTxt + '</td>' +
+                (gi === 0 ? '<td rowspan="' + pg.groups.length + '" style="padding:8px;text-align:center;vertical-align:middle;"><span style="font-weight:700;color:' + _errRelColor(rvPct, 0, maxRvPct || 1) + ';">' + rvPct.toFixed(1) + '%</span></td>' : '') +
+                '<td style="width:28%;padding:8px;text-align:center;">' + qcHtml + '</td>' +
+                '</tr>';
+        });
+    });
+
+    var thStyle = 'padding:6px 10px;font-size:0.9rem;background:#eef2ff;border-bottom:1px solid #ddd;text-align:center;';
+    var secTitle = 'font-weight:700;color:#1f3a6b;margin:16px 0 10px 0;padding-bottom:6px;border-bottom:2px solid #eef2f6;text-align:center;';
+    var html = '<div class="modal-overlay" id="' + modalId + '" style="background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);">' +
+        '<div class="modal-container err-modal-box" id="' + boxId + '" style="max-width:1100px;width:94%;border-radius:24px;overflow:hidden;max-height:88vh;display:flex;flex-direction:column;border:none;box-shadow:0 20px 35px rgba(0,0,0,0.2);">' +
+        '<div class="modal-header" style="background:#1f3a6b;padding:12px 18px;">' +
+        '<span>📋 失误类别【' + _ec(catName) + '】详细分析</span>' +
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+        '<button class="modal-screenshot-btn shot-hide-btn" onclick="screenshotSection(\'' + boxId + '\',\'失误类别_' + _ecJs(catName) + '_详细分析\')" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:20px;cursor:pointer;font-size:0.75rem;">📸 截图</button>' +
+        '<button class="modal-close-btn shot-hide-btn" onclick="document.getElementById(\'' + modalId + '\').remove()">✕</button>' +
+        '</div></div>' +
+        '<div class="modal-body" style="padding:16px 20px;overflow-y:auto;">' +
+        '<div style="background:#eef2ff;padding:12px;border-radius:12px;margin-bottom:16px;text-align:center;"><strong>📊 总计：' + total + ' 条问题记录</strong></div>' +
+        '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:260px;">' +
+        '<div style="' + secTitle + '">👥 涉及人员 Top5</div>' +
+        '<table style="width:100%;border-collapse:collapse;"><thead><tr>' +
+        '<th style="' + thStyle + '">涉及人员</th><th style="' + thStyle + '">失误数</th><th style="' + thStyle + '">百分占比</th>' +
+        '</tr></thead><tbody>' + cardRows(persons.slice(0, 5)) + '</tbody></table></div>' +
+        '<div style="flex:1;min-width:260px;">' +
+        '<div style="' + secTitle + '">📋 失误来源分布</div>' +
+        '<table style="width:100%;border-collapse:collapse;"><thead><tr>' +
+        '<th style="' + thStyle + '">来源</th><th style="' + thStyle + '">失误数</th><th style="' + thStyle + '">百分占比</th>' +
+        '</tr></thead><tbody>' + cardRows(sources) + '</tbody></table></div>' +
+        '</div>' +
+        '<div style="' + secTitle + '">📝 问题点分布</div>' +
+        '<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><thead><tr>' +
+        '<th style="width:15%;' + thStyle + '">涉及人员</th>' +
+        '<th style="width:43%;' + thStyle + '">问题点</th>' +
+        '<th style="width:14%;' + thStyle + '">占比</th>' +
+        '<th style="width:28%;' + thStyle + '">质检码</th>' +
+        '</tr></thead><tbody>' + (issueRows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">暂无记录</td></tr>') + '</tbody></table>' +
+        '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    var ov = document.getElementById(modalId);
+    ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+}
+
+// —— 弹窗：频发问题点（点汇总表「频发问题点」打开；照优学堂 showFrequentIssueModal 结构）——
+// 该类别下所有问题点按合并规则（相同/相似 ≥75%/语义等同）归组，按次数降序；同一问题点涉及多人时人员列展开。
+function showErrTopIssueModal(catName) {
+    var rows = (window._errCatRows || []).filter(function(e) { return (e.category || '(未分类)') === catName; });
+    if (!rows.length) return;
+    var total = rows.length;
+    var modalId = 'errIssueModal_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    var boxId = modalId + '_box';
+
+    var gs = [];
+    rows.forEach(function(e) {
+        var note = e.note || '';
+        var g = null;
+        for (var i = 0; i < gs.length; i++) {
+            if (_noteSim(gs[i].note, note) >= 0.75 || _noteSemEq(gs[i].note, note)) { g = gs[i]; break; }
+        }
+        if (!g) { g = { note: note, semName: _noteSemHit(note), n: 0, persons: {} }; gs.push(g); }
+        g.n++;
+        var pn = fixPanZeName(e.reviewer) || '(未知)';
+        if (!g.persons[pn]) g.persons[pn] = 0;
+        g.persons[pn]++;
+    });
+    gs.sort(function(a, b) { return b.n - a.n; });
+
+    var pcts = gs.map(function(g) { return g.n / total * 100; });
+    var minP = pcts.length ? Math.min.apply(null, pcts) : 0;
+    var maxP = pcts.length ? Math.max.apply(null, pcts) : 0;
+
+    var body = '';
+    gs.forEach(function(g) {
+        var persons = Object.keys(g.persons);
+        var pct = g.n / total * 100;
+        var noteTxt = _ec(g.semName || g.note || '--');
+        var nBadge = g.n > 1 ? ' <b style="color:#c0392b;">×' + g.n + '</b>' : '';
+        if (!persons.length) persons = ['(未知)'];
+        persons.forEach(function(pn, i) {
+            if (i === 0) {
+                body += '<tr>' +
+                    '<td rowspan="' + persons.length + '" style="padding:8px;text-align:center;vertical-align:middle;">📝 ' + noteTxt + nBadge + '</td>' +
+                    '<td rowspan="' + persons.length + '" style="padding:8px;text-align:center;vertical-align:middle;font-weight:700;">' + g.n + '次</td>' +
+                    '<td rowspan="' + persons.length + '" style="padding:8px;text-align:center;vertical-align:middle;">' + _errPctBar(pct, minP, maxP) + '</td>' +
+                    '<td style="padding:8px;text-align:center;">👤 ' + _ec(pn) + '</td></tr>';
+            } else {
+                body += '<tr><td style="padding:8px;text-align:center;">👤 ' + _ec(pn) + '</td></tr>';
+            }
+        });
+    });
+
+    var thStyle = 'padding:6px 10px;font-size:0.9rem;background:#eef2ff;border-bottom:1px solid #ddd;text-align:center;';
+    var html = '<div class="modal-overlay" id="' + modalId + '" style="background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);">' +
+        '<div class="modal-container err-modal-box" id="' + boxId + '" style="max-width:1000px;width:94%;border-radius:24px;overflow:hidden;max-height:88vh;display:flex;flex-direction:column;border:none;box-shadow:0 20px 35px rgba(0,0,0,0.2);">' +
+        '<div class="modal-header" style="background:#1f3a6b;padding:12px 18px;">' +
+        '<span>📌 频发问题点【' + _ec(catName) + '】</span>' +
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+        '<button class="modal-screenshot-btn shot-hide-btn" onclick="screenshotSection(\'' + boxId + '\',\'频发问题点_' + _ecJs(catName) + '\')" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:20px;cursor:pointer;font-size:0.75rem;">📸 截图</button>' +
+        '<button class="modal-close-btn shot-hide-btn" onclick="document.getElementById(\'' + modalId + '\').remove()">✕</button>' +
+        '</div></div>' +
+        '<div class="modal-body" style="padding:16px 20px;overflow-y:auto;">' +
+        '<div style="background:#eef2ff;padding:12px;border-radius:12px;margin-bottom:16px;text-align:center;"><strong>📊 总计：' + total + ' 条问题记录</strong></div>' +
+        '<div style="font-weight:700;color:#1f3a6b;margin:16px 0 10px 0;padding-bottom:6px;border-bottom:2px solid #eef2f6;text-align:center;">📝 问题点分布（按频次降序，同问题点合并）</div>' +
+        '<table style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr>' +
+        '<th style="width:35%;' + thStyle + '">问题点</th>' +
+        '<th style="width:12%;' + thStyle + '">出现次数</th>' +
+        '<th style="width:20%;' + thStyle + '">占比</th>' +
+        '<th style="width:33%;' + thStyle + '">涉及人员</th>' +
+        '</tr></thead><tbody>' + (body || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">暂无记录</td></tr>') + '</tbody></table>' +
+        '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    var ov = document.getElementById(modalId);
+    ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+}
+
+// ===== 📊 QA 抽检不一致汇总（2026-10-21 加：周视图整页最底，数据来自徐行飞书表）=====
+// 数据链路：飞书表《QA抽检不一致汇总》→ Cloudflare Pages 代理 /qa-week（服务端用徐行 token 读、缓存 30 分钟）
+// 周块映射：块连续、每周一块；锚点「10月第3周」= 10/12~10/18（用户 2026-10-21 确认）。
+// 本周数据一般要等到次周周一才出现在源文档 —— 找不到时按用户要求显示「源文档还未更新，请确认！」。
+var QA_WEEK_API = 'https://yxt-feishu.pages.dev/qa-week';
+var QA_WEEK_SECRET = 'yxt-feishu-2026';
+var _qaWeekSeq = 0;
+
+function buildQaWeekModule(curWd) {
+    var week = formatDate(curWd.monday);
+    var seq = ++_qaWeekSeq;
+    setTimeout(function () { loadQaWeek(week, seq); }, 0);   // 等 innerHTML 落地后再填
+    return '<div id="qaWeekSec" style="margin-top:14px;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<div id="qaWeekTitle" style="font-size:0.9rem;font-weight:700;color:var(--primary);">📊 QA抽检不一致汇总</div>' +
+        '<button class="btn btn-sm shot-hide-btn" onclick="screenshotSection(\'qaWeekSec\',\'QA抽检不一致汇总\')">📸 截此表</button>' +
+        '</div>' +
+        '<div id="qaWeekBody" style="font-size:0.78rem;color:#64748b;">⏳ 正在读取…</div>' +
+        '</div>';
+}
+
+function loadQaWeek(week, seq) {
+    var key = 'qa_week_' + week;
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+    function alive() { return seq === _qaWeekSeq && !!document.getElementById('qaWeekBody'); }
+    if (cached && cached.block) renderQaWeek(cached, week);   // 先显示缓存，接口回来再刷新
+    fetch(QA_WEEK_API + '?week=' + week, { headers: { 'x-yxt-secret': QA_WEEK_SECRET } })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+            if (!alive()) return;
+            if (!j || !j.ok) throw new Error((j && j.error) || '接口返回异常');
+            try { if (j.block) localStorage.setItem(key, JSON.stringify(j)); } catch (e) {}
+            renderQaWeek(j, week);
+        })
+        .catch(function (e) {
+            if (!alive() || (cached && cached.block)) return;
+            document.getElementById('qaWeekBody').innerHTML =
+                '<div style="padding:16px;text-align:center;color:#b45309;background:#fffbeb;border:1px dashed #fcd34d;border-radius:8px;">⚠️ 读取失败：' + _ec(String((e && e.message) || e)) + '</div>';
+        });
+}
+
+function renderQaWeek(j, week) {
+    var body = document.getElementById('qaWeekBody');
+    if (!body) return;
+    var titleEl = document.getElementById('qaWeekTitle');
+    var latest = j.latest || null;
+    if (!j.block) {
+        var msg = j.reason === 'not_published' ? '源文档还未更新，请确认！' : '源文档中没有该周数据';
+        var tip = latest ? '表内最新：' + String(latest.weekStart).slice(5).replace('-', '/') + ' ~ ' + String(latest.weekEnd).slice(5).replace('-', '/') + '（' + String(latest.title || '').split('）').pop() + '）' : '';
+        if (titleEl) titleEl.textContent = '📊 QA抽检不一致汇总';
+        body.innerHTML = '<div style="padding:18px;text-align:center;color:#b45309;background:#fffbeb;border:1px dashed #fcd34d;border-radius:8px;font-size:0.86rem;">⚠️ ' + msg +
+            (tip ? '<div style="margin-top:6px;font-size:0.72rem;color:#94a3b8;">' + _ec(tip) + '</div>' : '') + '</div>';
+        return;
+    }
+    var b = j.block;
+    var weekName = String(b.title || '').split('）').pop();
+    // 站点筛选：页面选的是单站 → 只显示该站（顶部指标也换成该站汇总，三仓汇总行不出）
+    var siteFilter = (typeof currentSite === 'string' ? currentSite : 'all');
+    var sites = b.sites || [];
+    var g = b.grand || { v: [0, 0, 0, 0, 0], total: 0 };
+    if (siteFilter !== 'all') {
+        sites = sites.filter(function (s) { return s.name === siteFilter; });
+        g = (sites[0] && sites[0].summary) ? sites[0].summary : { v: [0, 0, 0, 0, 0], total: 0 };
+    }
+    var siteTag = siteFilter !== 'all' ? ' · ' + siteFilter : '';
+    if (titleEl) titleEl.textContent = '📊 QA抽检不一致汇总（' + weekName + ' · ' + String(b.weekStart).slice(5).replace('-', '/') + '~' + String(b.weekEnd).slice(5).replace('-', '/') + siteTag + '）';
+
+    // 列色（2026-10-21 用户定）：上门失误淡红 / 标准·工具差异淡黄 / 隐性问题淡灰黑 / 上门灰度淡灰 / 争议类型淡紫 / 总量灰色
+    var QA_COLS = [
+        { h: '上门失误', bg: '#fde8e8', thb: '#fbd5d5' },
+        { h: '标准/工具差异', bg: '#fef9c3', thb: '#fdf1a8' },
+        { h: '隐性问题', bg: '#d7dde5', thb: '#c9d1db' },
+        { h: '上门灰度', bg: '#f1f5f9', thb: '#e6ebf1' },
+        { h: '争议类型', bg: '#ede9fe', thb: '#ddd6fe' },
+        { h: '总不一致订单量', bg: '#e5e7eb', thb: '#d1d5db' }
+    ];
+    // 顶部指标条（全部站点=三仓汇总；单站=该站汇总）
+    var allNums = [g.v[0], g.v[1], g.v[2], g.v[3], g.v[4], g.total];
+    var boxes = '';
+    QA_COLS.forEach(function (col, i) {
+        boxes += '<div style="flex:1;min-width:96px;background:' + col.bg + ';border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;text-align:center;">' +
+            '<div style="font-size:0.68rem;color:#64748b;">' + col.h + '</div>' +
+            '<div style="font-size:1.05rem;font-weight:700;color:' + (i === 5 ? '#1f3a6b' : '#334155') + ';">' + allNums[i] + '</div></div>';
+    });
+    var html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' + boxes + '</div>';
+
+    // 站点明细表：站点 rowspan=7（6 品类 + 汇总），站点列合并
+    // 表内配色（2026-10-21 用户定）：表头 + 站点单元格=浅灰 #e5e7eb；汇总行（站点/三仓）=淡绿 #dcfce7；
+    // 品类格/数据格=淡灰 #f1f5f9；单元格线加深显示、整表外框加粗
+    // ⚠️ 汇总行背景只写在 td 上、不写 tr——html2canvas 会把 tr 背景矩形盖到 rowspan 站点格底部（截图错位）
+    var HEAD_GREY = '#e5e7eb', PALE_GREEN = '#dcfce7', GREY = '#f1f5f9', CELL_BD = '1px solid #94a3b8';
+    var thBase = 'padding:6px 8px;font-size:0.74rem;border:' + CELL_BD + ';text-align:center;background:' + HEAD_GREY + ';';
+    var minT = Infinity, maxT = -Infinity;
+    sites.forEach(function (st) {
+        st.rows.forEach(function (r) { if (r.total < minT) minT = r.total; if (r.total > maxT) maxT = r.total; });
+        if (st.summary) { if (st.summary.total < minT) minT = st.summary.total; if (st.summary.total > maxT) maxT = st.summary.total; }
+    });
+    if (!isFinite(minT)) { minT = 0; maxT = 0; }
+    html += '<table class="data-table" style="table-layout:fixed;font-size:0.76rem;border-collapse:collapse;border:2px solid #64748b;">' +
+        '<thead><tr><th style="width:11%;' + thBase + '">站点</th><th style="width:15%;' + thBase + '">品类</th>' +
+        QA_COLS.map(function (col, i) { return '<th style="width:' + (i === 5 ? 14 : 12) + '%;' + thBase + '">' + col.h + '</th>'; }).join('') +
+        '</tr></thead><tbody>';
+    if (!sites.length) {
+        html += '<tr><td colspan="8" style="padding:14px;text-align:center;color:#94a3b8;border:' + CELL_BD + ';background:#ffffff;">该站点在这一周没有数据</td></tr>';
+    }
+    sites.forEach(function (st) {
+        var n = st.rows.length + (st.summary ? 1 : 0);
+        st.rows.forEach(function (r, i) {
+            html += '<tr>' +
+                (i === 0 ? '<td rowspan="' + n + '" style="text-align:center;vertical-align:middle;font-weight:700;color:#1f3a6b;background:' + HEAD_GREY + ';border:' + CELL_BD + ';">' + _ec(st.name) + '</td>' : '') +
+                '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';">' + _ec(r.category) + '</td>' +
+                r.v.map(function (x) { return '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';color:' + (x ? '#334155' : '#cbd5e1') + ';">' + x + '</td>'; }).join('') +
+                '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';font-weight:700;color:' + (r.total ? _errRelColor(r.total, minT, maxT) : '#cbd5e1') + ';">' + r.total + '</td>' +
+                '</tr>';
+        });
+        if (st.summary) {
+            var s = st.summary;
+            html += '<tr style="font-weight:700;">' +
+                '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';">汇总</td>' +
+                s.v.map(function (x) { return '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';">' + x + '</td>'; }).join('') +
+                '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">' + s.total + '</td></tr>';
+        }
+    });
+    if (siteFilter === 'all') {
+        html += '<tr style="font-weight:700;">' +
+            '<td colspan="2" style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">三仓汇总</td>' +
+            g.v.map(function (x) { return '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">' + x + '</td>'; }).join('') +
+            '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">' + g.total + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    html += '<div class="shot-hide-note" style="margin-top:6px;font-size:0.68rem;color:#94a3b8;">数据来源：飞书「QA抽检不一致汇总」（筛选 QA 结果与质检一致订单）；一般次周周一才更新上周数据。</div>';
+    body.innerHTML = html;
+}
+
+// ===== 📝 典型订单类型（2026-10-21 用户加：整页最底的可手动编辑框，固定预填内容，本机保存）=====
+// 缩进按用户 2026-10-21 定稿：三行全部顶格，「A.」「B.」与「标」左对齐
+var TYPICAL_ORDER_DEFAULT = '标准/工具差异：\nA. 手机：\nB. 平板：';
+var TYPICAL_ORDER_KEY = 'typical_order_type_note';
+function buildTypicalOrderEditor() {
+    var saved = null;
+    try { saved = localStorage.getItem(TYPICAL_ORDER_KEY); } catch (e) {}
+    var val = saved === null ? TYPICAL_ORDER_DEFAULT : saved;
+    return '<div id="typicalOrderSec" style="margin-top:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<div style="font-size:0.9rem;font-weight:700;color:#1e293b;">📝 典型订单类型</div>' +
+        '<button class="shot-hide-btn" onclick="screenshotSection(\'typicalOrderSec\',\'典型订单类型\')" style="border:none;background:#eef2ff;color:#2a5298;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">📸 截此表</button>' +
+        '</div>' +
+        '<textarea id="typicalOrderNote" style="width:100%;min-height:96px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;line-height:1.7;resize:vertical;outline:none;" oninput="saveTypicalOrderNote()">' + _ec(val) + '</textarea>' +
+        '</div>';
+}
+function saveTypicalOrderNote() {
+    var el = document.getElementById('typicalOrderNote');
+    if (!el) return;
+    try { localStorage.setItem(TYPICAL_ORDER_KEY, el.value); } catch (e) {}
+}
+
 // ===== ⚠️ 失误人员 Top3 独立模块（2026-09-07 用户定：不嵌明细块内，置失误分析底部独立成模块）=====
 // 每人一张卡片并排平分宽度；卡片内容=对该人员（当前维度，如 初审/抽检/QA/三来源）失误的深度分析：
 // 上半两栏 flex:1 平分：左=N 条·占全量% + 下方进度条（按第 1 名满条）；右=近 4 周对比柱（与周度走势同口径
@@ -2681,12 +3197,12 @@ function renderDimAnalysis(curWd, prevWd) {
             buildWeekTrendCard(curStat.rows, curStat.cats, curWd, accent) +
             '</div>';
     } else {
-        // 周版：排比卡右侧并排「📅 周度失误走势（最近4周档）」；下方接典型失误订单合并明细表
+        // 周版：排比卡右侧并排「📅 周度失误走势（最近4周档）」；下方接失误详细分析（类别汇总，点类别看明细弹窗）
         html += '<div class="m-flex2">' +
             buildTopListCard(curStat, prevStat, uw) +
             buildWeekSeqTrendCard(monthErrDim, curStat, accent) +
             '</div>';
-        html += buildWeeklyMergedDetail(monthErrDim, dc, curWd);
+        html += buildErrCategoryModule(monthErrDim, dc, curWd);
         var errTopHtml = buildErrTop3Module(monthErrDim, dc, curWd);   // ⚠️ 失误人员 Top3 深度分析模块（周版、独立成块）
     }
 
@@ -2700,6 +3216,8 @@ function renderDimAnalysis(curWd, prevWd) {
         '</div>';
 
     if (errTopHtml) html += errTopHtml;   // ⚠️ 失误人员 Top3 独立模块置页底（月版无明细则不出）
+    if (!isMonth) html += buildQaWeekModule(curWd);   // 📊 QA抽检不一致汇总（周版）
+    html += buildTypicalOrderEditor();   // 📝 典型订单类型（整页最底，手动编辑框）
     document.getElementById('errorTabContent').innerHTML = html;
 
     // 5 卡点击：单选联动；点当前卡返回合计
@@ -2793,22 +3311,22 @@ function screenshotSection(elementId, label) {
     if (!el) { alert("未找到截图元素"); return; }
     if (typeof html2canvas === "undefined") { alert("html2canvas 未加载，请刷新后重试"); return; }
 
-    // 三模块截图隔离（2026-09-14 用户定）：失误分析 / 典型失误订单 / 失误人员Top3 各自只截自己的小模块
-    // - 🔍 失误分析整区截图：明细块、备注、Top3 都不出现
-    // - 📋 典型失误订单「截此表」：备注临时移入同截（2026-09-07 用户定归属），截完按原位插回
-    // - ⚠️ Top3「截此表」：只含 3 张卡片（备注/明细都不影响）
-    var hideSec = el.querySelector('#weeklyMergedSec');   // 命中=整区截图（周版含明细块）；明细自身截图时查不到自身
-    var hideTop = el.querySelector('#errTopSec');         // 命中=整区截图不含 Top3；Top3 自身截图时查不到自身
+    // 三模块截图隔离（2026-09-14 用户定；2026-10-21 随模块替换更新）：失误分析 / 失误详细分析 / 失误人员Top3 各自只截自己
+    // - 🔍 失误分析整区截图：类别汇总块、备注、Top3 都不出现
+    // - 🏷️ 失误详细分析「截此表」：只含类别汇总表（备注不随截）
+    // - ⚠️ Top3「截此表」：只含 3 张卡片
+    // - 弹窗（err-modal-box）：临时放开 max-height/overflow，保证弹窗里滚动部分也能截全
+    var hideSec = el.querySelector('#weeklyCategorySec');   // 命中=整区截图；模块自身截图时查不到自身
+    var hideTop = el.querySelector('#errTopSec');           // 命中=整区截图不含 Top3；Top3 自身截图时查不到自身
+    var hideQa = el.querySelector('#qaWeekSec');            // 命中=整区截图不含 QA 汇总（2026-10-21）
     var noteSec = document.getElementById('noteSec');
-    var noteHome = (noteSec && noteSec.parentNode) || null;
-    var noteNext = (noteSec && noteSec.nextSibling) || null;   // 原位锚点（避免 appendChild 把备注挪到 Top3 之后）
-    var noteMoved = false;
-    if (hideSec) {
-        if (noteSec) noteSec.style.display = 'none';
-    } else if (el.id === 'weeklyMergedSec' && noteSec && noteHome && noteHome !== el) {
-        el.appendChild(noteSec);   // 备注并入明细截图
-        noteMoved = true;
+    var modalBox = !!(el.classList && el.classList.contains('err-modal-box'));
+    var savedMaxH = '', savedOverflow = '';
+    if (modalBox) {
+        savedMaxH = el.style.maxHeight; savedOverflow = el.style.overflow;
+        el.style.maxHeight = 'none'; el.style.overflow = 'visible';
     }
+    if (hideSec && noteSec) noteSec.style.display = 'none';
     // 截图前把 textarea 替换为 pre，保留换行
     var swaps = [];
     var textareas = el.querySelectorAll('textarea');
@@ -2826,17 +3344,15 @@ function screenshotSection(elementId, label) {
     // 整区截图隐藏明细块与 Top3 模块（2026-09-14：三模块截图各自独立）
     if (hideSec) hideSec.style.display = 'none';
     if (hideTop) hideTop.style.display = 'none';
+    if (hideQa) hideQa.style.display = 'none';
     var restoreShots = function() {
         swaps.forEach(function(s) { s.pre.remove(); s.textarea.style.display = ''; });
         hideCols.forEach(function(td) { td.style.display = ''; });
-        if (noteMoved && noteHome) {
-            // 备注插回原位（Top3 之前）；锚点漂移则退回追加
-            if (noteNext && noteNext.parentNode === noteHome) noteHome.insertBefore(noteSec, noteNext);
-            else noteHome.appendChild(noteSec);
-        }
         if (noteSec) noteSec.style.display = '';
         if (hideSec) hideSec.style.display = '';
         if (hideTop) hideTop.style.display = '';
+        if (hideQa) hideQa.style.display = '';
+        if (modalBox) { el.style.maxHeight = savedMaxH; el.style.overflow = savedOverflow; }
     };
 
     html2canvas(el, {
