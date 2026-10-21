@@ -27,6 +27,23 @@ body {
 /* ========== 布局 ========== */
 #app { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
 
+/* ========== 左侧导航栏（2026-10-21 用户加） ========== */
+body { padding-left: 178px; }
+.side-nav { position: fixed; left: 0; top: 0; bottom: 0; width: 178px; background: var(--bg-card); border-right: 1px solid #dbe4ee; padding: 16px 10px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; z-index: 100; }
+.side-nav-title { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.08em; padding: 2px 10px 10px; }
+.side-nav-item { display: block; padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; line-height: 1.45; color: var(--text-secondary); text-decoration: none; border-left: 3px solid transparent; transition: background .15s, color .15s; cursor: pointer; }
+.side-nav-item:hover { background: #f1f5f9; color: var(--primary); }
+.side-nav-item.active { background: #eef2ff; color: var(--primary); font-weight: 700; border-left-color: var(--primary-light); }
+.side-nav-item.nav-disabled { opacity: 0.38; cursor: not-allowed; }
+.side-nav-item.nav-disabled:hover { background: transparent; color: var(--text-secondary); }
+.side-nav-foot { margin-top: auto; padding: 10px 10px 2px; font-size: 0.68rem; color: #b6c2d4; line-height: 1.5; }
+@media (max-width: 900px) {
+    body { padding-left: 0; }
+    .side-nav { position: static; width: auto; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid #dbe4ee; padding: 8px 10px; gap: 2px; }
+    .side-nav-title, .side-nav-foot { display: none; }
+    .side-nav-item { border-left: none; padding: 6px 9px; }
+}
+
 /* ========== 顶部栏 ========== */
 .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .header-title { font-size: 1.4rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
@@ -249,9 +266,20 @@ tr.row-err-mid td { background: #fde8e8 !important; }
 
 </head>
 <body>
+<!-- 左侧导航栏（2026-10-21 用户加）：周期与站点 / 核心指标 / 抽检明细+失误总览 / 失误分析 / 失误详细分析 / QA抽检不一致汇总 -->
+<nav class="side-nav" id="sideNav">
+    <div class="side-nav-title">页面导航</div>
+    <a class="side-nav-item" data-target="headerBar">🎛️ 周期与站点</a>
+    <a class="side-nav-item" data-target="kpiRow">核心指标</a>
+    <a class="side-nav-item" data-target="personSection">抽检明细+失误总览</a>
+    <a class="side-nav-item" data-target="errorSection">🔍 失误分析</a>
+    <a class="side-nav-item" data-target="weeklyCategorySec">🏷️ 失误详细分析</a>
+    <a class="side-nav-item" data-target="qaWeekSec">QA抽检不一致汇总</a>
+    <div class="side-nav-foot">点条目跳到对应模块；灰掉的在当前视图没有（如月视图无失误详细分析 / QA 汇总）</div>
+</nav>
 <div id="app">
     <!-- 顶部栏 -->
-    <div class="header">
+    <div class="header" id="headerBar">
         <div class="header-title">📊 品控周报分析</div>
         <div class="header-controls">
             <div class="week-selector">
@@ -2465,7 +2493,11 @@ function renderQaWeek(j, week) {
         var msg = j.reason === 'not_published' ? '源文档还未更新，请确认！' : '源文档中没有该周数据';
         var tip = latest ? '表内最新：' + String(latest.weekStart).slice(5).replace('-', '/') + ' ~ ' + String(latest.weekEnd).slice(5).replace('-', '/') + '（' + String(latest.title || '').split('）').pop() + '）' : '';
         if (titleEl) titleEl.textContent = '📊 QA抽检不一致汇总';
-        body.innerHTML = '<div style="padding:18px;text-align:center;color:#b45309;background:#fffbeb;border:1px dashed #fcd34d;border-radius:8px;font-size:0.86rem;">⚠️ ' + msg +
+        // 「源文档还未更新」后面带一个跳转按钮（2026-10-21 用户定）：点击新窗口打开《QA抽检不一致汇总》飞书表
+        var docLink = j.reason === 'not_published'
+            ? '<a href="https://zhuanspirit.feishu.cn/sheets/MNCusANKph6jrAtIzBgckbjDnUe" target="_blank" rel="noopener" style="display:inline-block;margin-left:8px;padding:3px 11px;border-radius:20px;background:#f59e0b;color:#ffffff;font-size:0.76rem;font-weight:600;text-decoration:none;white-space:nowrap;vertical-align:middle;">点击跳转源文档更新 ↗</a>'
+            : '';
+        body.innerHTML = '<div style="padding:18px;text-align:center;color:#b45309;background:#fffbeb;border:1px dashed #fcd34d;border-radius:8px;font-size:0.86rem;">⚠️ ' + msg + docLink +
             (tip ? '<div style="margin-top:6px;font-size:0.72rem;color:#94a3b8;">' + _ec(tip) + '</div>' : '') + '</div>';
         return;
     }
@@ -3219,6 +3251,7 @@ function renderDimAnalysis(curWd, prevWd) {
     if (!isMonth) html += buildQaWeekModule(curWd);   // 📊 QA抽检不一致汇总（周版）
     html += buildTypicalOrderEditor();   // 📝 典型订单类型（整页最底，手动编辑框）
     document.getElementById('errorTabContent').innerHTML = html;
+    if (typeof _sideNavRefresh === 'function') _sideNavRefresh();   // 重新渲染后刷新左侧导航可用状态
 
     // 5 卡点击：单选联动；点当前卡返回合计
     var contentEl = document.getElementById('errorTabContent');
@@ -3984,7 +4017,80 @@ function applyLoadedData(results) {
     else statusParts.push('判责(Supabase):加载失败 ⚠️');
 
     refreshView();
+    if (typeof _sideNavRefresh === 'function') _sideNavRefresh();
 }
+
+// ==================== 10.5 左侧导航栏（2026-10-21 用户加）====================
+// 5 个锚点：核心指标 / 抽检明细+失误总览 / 失误分析 / 失误详细分析 / QA抽检不一致汇总
+// 后两个是动态模块（周视图才渲染，月视图没有）→ 目标不存在时置灰、不可点
+function _sideNavItems() {
+    var nav = document.getElementById('sideNav');
+    return nav ? Array.prototype.slice.call(nav.querySelectorAll('.side-nav-item')) : [];
+}
+function _sideNavVisible(el) {
+    if (!el) return false;
+    // 有布局信息时以布局为准（真实浏览器里 display:none 的元素 rects 为空）
+    if (el.getClientRects && el.getClientRects().length) return true;
+    // 无布局环境（jsdom）或零尺寸：逐级检查 display，避免把隐藏模块当成可见
+    for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+        if (n.style && n.style.display === 'none') return false;
+        if (window.getComputedStyle) {
+            var cs = window.getComputedStyle(n);
+            if (cs && cs.display === 'none') return false;
+        }
+    }
+    return true;
+}
+function _sideNavSetActive(activeItem) {
+    _sideNavItems().forEach(function(a) { a.classList.toggle('active', a === activeItem); });
+}
+function _sideNavRefresh() {
+    var items = _sideNavItems();
+    if (!items.length) return;
+    var best = null, bestTop = -Infinity, first = null;
+    var atTop = window.pageYOffset <= 4;   // 已在页面顶部：高亮第一项（顶部栏本身就在眼前）
+    var atBottom = (window.innerHeight + window.pageYOffset) >= (document.documentElement.scrollHeight - 4);
+    items.forEach(function(a) {
+        var el = document.getElementById(a.getAttribute('data-target'));
+        var showOk = _sideNavVisible(el);
+        a.classList.toggle('nav-disabled', !showOk);
+        if (!showOk) return;
+        if (!first) first = a;
+        var top = el.getBoundingClientRect().top;
+        if (top <= 130 && top > bestTop) { best = a; bestTop = top; }
+        if (atBottom) best = a;   // 滚到页底：高亮最后一个存在的模块（QA 汇总常常滚不到顶）
+    });
+    _sideNavSetActive(atTop ? first : (best || first));
+}
+function _sideNavScrollTo(id) {
+    var el = document.getElementById(id);
+    if (!_sideNavVisible(el)) return false;
+    var top = el.getBoundingClientRect().top + window.pageYOffset - 16;
+    try { window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }
+    catch (e) { window.scrollTo(0, Math.max(0, top)); }
+    return true;
+}
+(function initSideNav() {
+    var items = _sideNavItems();
+    if (!items.length) return;
+    items.forEach(function(a) {
+        a.addEventListener('click', function() {
+            if (a.classList.contains('nav-disabled')) return;   // 当前视图没有该模块
+            _sideNavSetActive(a);
+            _sideNavScrollTo(a.getAttribute('data-target'));
+            setTimeout(_sideNavRefresh, 420);   // 平滑滚动结束后按实际位置校正高亮
+        });
+    });
+    var ticking = false;
+    function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function() { ticking = false; _sideNavRefresh(); });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    _sideNavRefresh();
+})();
 
 // ==================== 11. 启动 ====================
 setupEventListeners();
