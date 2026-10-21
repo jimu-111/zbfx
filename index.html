@@ -2127,6 +2127,13 @@ function _errTopIssue(rows) {
     return gs[0] || null;
 }
 
+// 失误详细分析的归类（2026-10-21 用户定）：来源=QA 的一律归入「QA失误」，其余按原失误类别
+// —— 只作用于本模块及其两个弹窗；5 张卡/排比/对比表等仍按原始类别统计
+function _errCatName(e) {
+    if (e && e.source === 'QA') return 'QA失误';
+    return (e && e.category) || '(未分类)';
+}
+
 function buildErrCategoryModule(dimId, dc, curWd) {
     var rows = monthDimRows(dimId, curWd);
     window._errCatRows = rows;   // 供弹窗取明细（随 5 卡联动/切周档同步刷新）
@@ -2135,7 +2142,7 @@ function buildErrCategoryModule(dimId, dc, curWd) {
 
     var map = {};
     rows.forEach(function(e) {
-        var cat = e.category || '(未分类)';
+        var cat = _errCatName(e);
         if (!map[cat]) map[cat] = { name: cat, n: 0, rows: [] };
         map[cat].n++;
         map[cat].rows.push(e);
@@ -2254,7 +2261,7 @@ function copyErrQC(text, btn) {
     }
 }
 function showErrCategoryModal(catName) {
-    var rows = (window._errCatRows || []).filter(function(e) { return (e.category || '(未分类)') === catName; });
+    var rows = (window._errCatRows || []).filter(function(e) { return _errCatName(e) === catName; });
     if (!rows.length) return;
     var total = rows.length;
     var modalId = 'errCatModal_' + Date.now();
@@ -2372,7 +2379,7 @@ function showErrCategoryModal(catName) {
 // —— 弹窗：频发问题点（点汇总表「频发问题点」打开；照优学堂 showFrequentIssueModal 结构）——
 // 该类别下所有问题点按合并规则（相同/相似 ≥75%/语义等同）归组，按次数降序；同一问题点涉及多人时人员列展开。
 function showErrTopIssueModal(catName) {
-    var rows = (window._errCatRows || []).filter(function(e) { return (e.category || '(未分类)') === catName; });
+    var rows = (window._errCatRows || []).filter(function(e) { return _errCatName(e) === catName; });
     if (!rows.length) return;
     var total = rows.length;
     var modalId = 'errIssueModal_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
