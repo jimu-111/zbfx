@@ -2506,43 +2506,43 @@ function renderQaWeek(j, week) {
     // 品类格/数据格=淡灰 #f1f5f9；单元格线加深显示、整表外框加粗
     // ⚠️ 汇总行背景只写在 td 上、不写 tr——html2canvas 会把 tr 背景矩形盖到 rowspan 站点格底部（截图错位）
     var HEAD_GREY = '#e5e7eb', PALE_GREEN = '#dcfce7', GREY = '#f1f5f9', CELL_BD = '1px solid #94a3b8';
-    var thBase = 'padding:6px 8px;font-size:0.74rem;border:' + CELL_BD + ';text-align:center;background:' + HEAD_GREY + ';';
+    var thBase = 'padding:6px 8px;font-size:0.74rem;border:' + CELL_BD + ';text-align:center;background:' + HEAD_GREY + ';color:#000;';
     var minT = Infinity, maxT = -Infinity;
     sites.forEach(function (st) {
         st.rows.forEach(function (r) { if (r.total < minT) minT = r.total; if (r.total > maxT) maxT = r.total; });
         if (st.summary) { if (st.summary.total < minT) minT = st.summary.total; if (st.summary.total > maxT) maxT = st.summary.total; }
     });
     if (!isFinite(minT)) { minT = 0; maxT = 0; }
-    html += '<table class="data-table" style="table-layout:fixed;font-size:0.76rem;border-collapse:collapse;border:2px solid #64748b;">' +
+    html += '<table class="data-table" style="table-layout:fixed;font-size:0.76rem;border-collapse:collapse;border:2px solid #64748b;color:#000;">' +
         '<thead><tr><th style="width:11%;' + thBase + '">站点</th><th style="width:15%;' + thBase + '">品类</th>' +
         QA_COLS.map(function (col, i) { return '<th style="width:' + (i === 5 ? 14 : 12) + '%;' + thBase + '">' + col.h + '</th>'; }).join('') +
         '</tr></thead><tbody>';
     if (!sites.length) {
-        html += '<tr><td colspan="8" style="padding:14px;text-align:center;color:#94a3b8;border:' + CELL_BD + ';background:#ffffff;">该站点在这一周没有数据</td></tr>';
+        html += '<tr><td colspan="8" style="padding:14px;text-align:center;color:#000;border:' + CELL_BD + ';background:#ffffff;">该站点在这一周没有数据</td></tr>';
     }
     sites.forEach(function (st) {
         var n = st.rows.length + (st.summary ? 1 : 0);
         st.rows.forEach(function (r, i) {
             html += '<tr>' +
-                (i === 0 ? '<td rowspan="' + n + '" style="text-align:center;vertical-align:middle;font-weight:700;color:#1f3a6b;background:' + HEAD_GREY + ';border:' + CELL_BD + ';">' + _ec(st.name) + '</td>' : '') +
-                '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';">' + _ec(r.category) + '</td>' +
-                r.v.map(function (x) { return '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';color:' + (x ? '#334155' : '#cbd5e1') + ';">' + x + '</td>'; }).join('') +
-                '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';font-weight:700;color:' + (r.total ? _errRelColor(r.total, minT, maxT) : '#cbd5e1') + ';">' + r.total + '</td>' +
+                (i === 0 ? '<td rowspan="' + n + '" style="text-align:center;vertical-align:middle;font-weight:700;color:#000;background:' + HEAD_GREY + ';border:' + CELL_BD + ';">' + _ec(st.name) + '</td>' : '') +
+                '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';color:#000;">' + _ec(r.category) + '</td>' +
+                r.v.map(function (x) { return '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';color:#000;">' + x + '</td>'; }).join('') +
+                '<td style="text-align:center;background:' + GREY + ';border:' + CELL_BD + ';font-weight:700;color:#000;">' + r.total + '</td>' +
                 '</tr>';
         });
         if (st.summary) {
             var s = st.summary;
             html += '<tr style="font-weight:700;">' +
-                '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';">汇总</td>' +
-                s.v.map(function (x) { return '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';">' + x + '</td>'; }).join('') +
-                '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">' + s.total + '</td></tr>';
+                '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#000;">汇总</td>' +
+                s.v.map(function (x) { return '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#000;">' + x + '</td>'; }).join('') +
+                '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#000;">' + s.total + '</td></tr>';
         }
     });
     if (siteFilter === 'all') {
         html += '<tr style="font-weight:700;">' +
-            '<td colspan="2" style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">三仓汇总</td>' +
-            g.v.map(function (x) { return '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">' + x + '</td>'; }).join('') +
-            '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#1f3a6b;">' + g.total + '</td></tr>';
+            '<td colspan="2" style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#000;">三仓汇总</td>' +
+            g.v.map(function (x) { return '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#000;">' + x + '</td>'; }).join('') +
+            '<td style="text-align:center;background:' + PALE_GREEN + ';border:' + CELL_BD + ';color:#000;">' + g.total + '</td></tr>';
     }
     html += '</tbody></table>';
     html += '<div class="shot-hide-note" style="margin-top:6px;font-size:0.68rem;color:#94a3b8;">数据来源：飞书「QA抽检不一致汇总」（筛选 QA 结果与质检一致订单）；一般次周周一才更新上周数据。</div>';
