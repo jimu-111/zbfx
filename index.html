@@ -383,7 +383,7 @@ const FEISHU_CONFIG = {
     panZeSheetId: '8pTEgS'
 };
 
-const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','吴尧飞':'深圳','陈佳鹏':'深圳','许文欣':'深圳','郭翠辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','陆鑫':'青岛','葛玉鹏':'青岛','王世界':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','雍彬彬':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','李忠林':'成都','延依飞':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都','刘锐':'成都' };
+const SITE_MAP = { '袁彬城':'深圳','许嘉林':'深圳','林嘉士':'深圳','王跃强':'深圳','孙俊':'深圳','姜玉林':'深圳','邹文文':'深圳','刘华城':'深圳','彭士观':'深圳','宁泰联':'深圳','吕建效':'深圳','张兢':'深圳','贺涛':'深圳','黄俊德':'深圳','李晓阳':'深圳','赵元坤':'深圳','盘训起':'深圳','冯开宁':'深圳','刘文能':'深圳','丁怀强':'深圳','林欣彬':'深圳','许泽雄':'深圳','曾清源':'深圳','吴松豪':'深圳','王燕文':'深圳','庄振航':'深圳','陈跃军':'深圳','王帅':'深圳','李念甘':'深圳','林家文':'深圳','廖天水':'深圳','廖国辉':'深圳','吴尧飞':'深圳','陈佳鹏':'深圳','许文欣':'深圳','郭翠辉':'深圳','孙伟':'青岛','苏超跃':'青岛','王清婷':'青岛','徐贤炜':'青岛','王洋':'青岛','郑凯雄':'青岛','陶永嵩':'青岛','王为':'青岛','刘荫民':'青岛','代金鹏':'青岛','辛明泉':'青岛','王兴清':'青岛','姜超':'青岛','张明':'青岛','魏才玉':'青岛','张凯凯':'青岛','刘昊东':'青岛','李选国':'青岛','王梦阳':'青岛','王瑞宇':'青岛','陈文彬':'青岛','许江':'青岛','贺文锐':'青岛','臧天昊':'青岛','王璐':'青岛','李仁义':'青岛','陆鑫':'青岛','葛玉鹏':'青岛','王世界':'青岛','徐行':'成都','何显健':'成都','陈毅军':'成都','胡志鹏':'成都','樊景舜':'成都','向阳':'成都','周金山':'成都','马浩':'成都','伏鑫':'成都','肖健平':'成都','罗宁':'成都','吴辉':'成都','任青俊':'成都','杜攀':'成都','麦钧淇':'成都','杨宏':'成都','赵晨鸿':'成都','张俊':'成都','刘超':'成都','李晓洋':'成都','张浩文':'成都','唐洲':'成都','刘锐':'成都' };
 
 const FEISHU_PROXY_URL = 'https://zfxwnixlvdxawoylhgxj.supabase.co/functions/v1/feishu-proxy';
 const FEISHU_CLOUDFLARE_PROXY_URL = 'https://feishu-proxy.xuhang1117.workers.dev'; // Cloudflare Worker 代理（2026-09-04）
@@ -2610,6 +2610,119 @@ function saveTypicalOrderNote() {
     try { localStorage.setItem(TYPICAL_ORDER_KEY, el.value); } catch (e) {}
 }
 
+// ===== 📝 失误分析总结（自动生成，2026-10-21 用户定）=====
+// 排在失误分析排比卡/走势卡下方、失误详细分析上方；内容按排比卡/走势卡口径自动写三句，像「📝 周报文本」一样直接复制。
+// 口径：① 前三类别按当前周期条数取，占比=前三合计/总失误；② 环比上一周期，取变化最明显的三个类别，降=有改善、升=上涨明显；
+//       ③ 人员涨跌按上一周期对比：以「固定站点名单」SITE_MAP 里当前站点的人员为基数（含两周都没失误的人，计持平），
+//         名单外的人一律不算；维度选中「QA」来源卡时不再把类别折叠成 QA失误。
+//       注：2026-10-21 用户定「两周都是 0 条 → 计入持平」，且基数从抽检明细改为固定站点名单。
+function _errSummaryNames(names) {
+    if (names.length <= 1) return names.join('');
+    return names.length === 2 ? names.join('和') : names.join('、');
+}
+function _errSummaryUpClause(names) {
+    var s = _errSummaryNames(names);
+    return s + (/失误$/.test(s) ? '上涨明显' : '失误上涨明显');
+}
+function buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster) {
+    var unitCur = isMonth ? '本月' : '本周';
+    var unitPrev = isMonth ? '上月' : '上周';
+    var mapQA = dimId !== 'QA';   // 看「QA」来源卡时全部都是 QA，不再折叠类别
+    function catOf(e) { return mapQA ? _errCatName(e) : ((e && e.category) || '(未分类)'); }
+    function countBy(stat) {
+        var m = {};
+        ((stat && stat.rows) || []).forEach(function(e) { var c = catOf(e); m[c] = (m[c] || 0) + 1; });
+        return m;
+    }
+    var curRows = (curStat && curStat.rows) || [];
+    var total = curRows.length;
+    if (total === 0) return unitCur + '无失误记录。';
+
+    var curMap = countBy(curStat);
+    var prevMap = prevStat ? countBy(prevStat) : null;
+
+    // ① 前三失误类别 + 占总失误比例
+    var cats = Object.keys(curMap).map(function(c) { return { name: c, n: curMap[c] }; })
+        .sort(function(a, b) { return b.n - a.n || (a.name < b.name ? -1 : 1); });
+    var top = cats.slice(0, 3);
+    var topN = top.reduce(function(s, c) { return s + c.n; }, 0);
+    var lines = [];
+    lines.push('前三的主要失误类别：' + top.map(function(c) { return c.name; }).join('、') +
+        '，占总失误' + (topN / total * 100).toFixed(2) + '%；');
+
+    // ② 环比上一周期，变化最明显的三个类别
+    if (!prevMap) {
+        lines.push('暂无' + unitPrev + '数据，不做环比。');
+    } else {
+        var seen = {}, deltas = [];
+        Object.keys(curMap).concat(Object.keys(prevMap)).forEach(function(nm) {
+            if (seen[nm]) return;
+            seen[nm] = 1;
+            var d = (curMap[nm] || 0) - (prevMap[nm] || 0);
+            if (d !== 0) deltas.push({ name: nm, d: d });
+        });
+        deltas.sort(function(a, b) {
+            return Math.abs(b.d) - Math.abs(a.d)                                        // 变化幅度大的优先
+                || (curMap[b.name] || 0) - (curMap[a.name] || 0)                        // 幅度相同：本期条数多的优先
+                || (a.name < b.name ? -1 : 1);
+        });
+        var pick = deltas.slice(0, 3);
+        var down = pick.filter(function(x) { return x.d < 0; }).map(function(x) { return x.name; });
+        var up = pick.filter(function(x) { return x.d > 0; }).map(function(x) { return x.name; });
+        var parts = [];
+        if (down.length) parts.push(_errSummaryNames(down) + unitCur + '有改善');
+        if (up.length) parts.push(_errSummaryUpClause(up));
+        lines.push(parts.length ? parts.join('，') + '；' : '各失误类别环比' + unitPrev + '基本持平。');
+    }
+
+    // ③ 人员涨跌（基数=固定站点名单里当前站点的人；两周都 0 条也计持平）
+    if (!prevMap) {
+        lines.push(unitCur + '失误：暂无' + unitPrev + '数据可对比。');
+    } else {
+        var hasRoster = Object.prototype.toString.call(curRoster) === '[object Array]';
+        function tally(stat) {
+            var m = {};
+            ((stat && stat.rows) || []).forEach(function(e) {
+                var nm = fixPanZeName(e.reviewer);
+                if (!nm || !SITE_MAP[nm]) return;   // 只算固定站点名单里的人
+                m[nm] = (m[nm] || 0) + 1;
+            });
+            return m;
+        }
+        var curP = tally(curStat), prevP = tally(prevStat);
+        var people = {};
+        if (hasRoster) curRoster.forEach(function(n) { var nm = fixPanZeName(n); if (nm && SITE_MAP[nm]) people[nm] = 1; });   // 固定名单里两周都没失误的人也进来 → 持平
+        Object.keys(curP).concat(Object.keys(prevP)).forEach(function(nm) { people[nm] = 1; });
+        var upN = 0, downN = 0, flatN = 0;
+        Object.keys(people).forEach(function(nm) {
+            var a = curP[nm] || 0, b = prevP[nm] || 0;
+            if (a > b) upN++; else if (a < b) downN++; else flatN++;
+        });
+        lines.push(unitCur + '失误：上涨' + upN + '人，下降' + downN + '人，持平' + flatN + '人。');
+    }
+    // 每条前面加序号（2026-10-21 用户定：取消缩进，改（1）（2）（3）），复制出去也带序号
+    return lines.map(function(l, i) { return '（' + (i + 1) + '）' + l; }).join('\n');
+}
+function buildErrSummaryEditor(curStat, prevStat, dimId, isMonth, curRoster) {
+    var txt = buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster);
+    return '<div id="errSummarySec" style="margin-top:14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+        '<div style="font-size:0.9rem;font-weight:700;color:#1e293b;">📝 失误分析总结（自动生成）</div>' +
+        '<span style="display:flex;align-items:center;gap:6px;">' +
+        '<button class="btn btn-sm shot-hide-btn" id="errSummaryCopyBtn" onclick="copyErrSummary()" title="复制总结文本">📋 复制</button>' +
+        '<button class="shot-hide-btn" onclick="screenshotSection(\'errSummarySec\',\'失误分析总结\')" style="border:none;background:#eef2ff;color:#2a5298;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">📸 截此表</button>' +
+        '</span>' +
+        '</div>' +
+        '<textarea id="errSummaryNote" readonly style="width:100%;min-height:96px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.78rem;font-family:inherit;line-height:1.7;resize:vertical;outline:none;background:#fafcfd;color:#1f3a6b;">' + _ec(txt) + '</textarea>' +
+        '<div class="shot-hide-note" style="margin-top:6px;font-size:0.68rem;color:#94a3b8;">数据来源：全类别排比卡 / 周度走势卡（随周档、站点、5 卡维度联动）；均环比上一周期，第三行按固定站点名单统计（两周都没失误的人计持平）。</div>' +
+        '</div>';
+}
+function copyErrSummary() {
+    var ta = document.getElementById('errSummaryNote');
+    if (!ta) return;
+    copyErrQC(ta.value, document.getElementById('errSummaryCopyBtn'));
+}
+
 // ===== ⚠️ 失误人员 Top3 独立模块（2026-09-07 用户定：不嵌明细块内，置失误分析底部独立成模块）=====
 // 每人一张卡片并排平分宽度；卡片内容=对该人员（当前维度，如 初审/抽检/QA/三来源）失误的深度分析：
 // 上半两栏 flex:1 平分：左=N 条·占全量% + 下方进度条（按第 1 名满条）；右=近 4 周对比柱（与周度走势同口径
@@ -3188,6 +3301,11 @@ function renderDimAnalysis(curWd, prevWd) {
         if (prevWd) stats[dc.id + '_prev'] = monthDimStat(dc.id, prevWd);
     });
 
+    // 📝 总结第三行的人员基数：固定站点名单（SITE_MAP）里当前站点的人；选「全部」= 全部固定名单
+    var summaryRoster = Object.keys(SITE_MAP).filter(function(n) {
+        return currentSite === 'all' || SITE_MAP[n] === currentSite;
+    });
+
     var html = '';
     // —— 顶部 5 张等宽卡（本周期数 + 上一周期/环比小字；点击=只看该维度，再点一次返回合计）——
     html += '<div class="dim5-cards">';
@@ -3235,12 +3353,14 @@ function renderDimAnalysis(curWd, prevWd) {
             buildTopListCard(curStat, prevStat, uw) +
             buildWeekTrendCard(curStat.rows, curStat.cats, curWd, accent) +
             '</div>';
+        html += buildErrSummaryEditor(curStat, prevStat, monthErrDim, true, summaryRoster);   // 📝 失误分析总结（自动生成）
     } else {
         // 周版：排比卡右侧并排「📅 周度失误走势（最近4周档）」；下方接失误详细分析（类别汇总，点类别看明细弹窗）
         html += '<div class="m-flex2">' +
             buildTopListCard(curStat, prevStat, uw) +
             buildWeekSeqTrendCard(monthErrDim, curStat, accent) +
             '</div>';
+        html += buildErrSummaryEditor(curStat, prevStat, monthErrDim, false, summaryRoster);   // 📝 失误分析总结（自动生成）
         html += buildErrCategoryModule(monthErrDim, dc, curWd);
         var errTopHtml = buildErrTop3Module(monthErrDim, dc, curWd);   // ⚠️ 失误人员 Top3 深度分析模块（周版、独立成块）
     }
