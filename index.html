@@ -3555,9 +3555,10 @@ function generateReportText(weekData, allWeeks) {
 
 // ===== 周报文本模板（2026-09-07 用户定稿）=====
 // 1、本周抽检总量：N（各抽检人员：计数 全列）环比上升N台； ——续行 线上/实物（各占比）
-// 2、抽检人效：N/7≈M，环比提升/下降M台；3、判责量：N，环比N台
+// 2、抽检人效：N/有效抽检天数≈M，环比提升/下降M台（2026-10-26 用户定：不再固定 /7）；3、判责量：N，环比N台
 // 4、抽检覆盖率(15%)：x%，较上周提升y%；5、抽检准确率(99%)：x%，较上周提升y%
 // 6、失误总量（三来源合计）：N条，环比N条；7、判责准确率(99.5%)：x%，较上周提升y%
+// 4/5/7 口径（2026-10-26 用户定）：按展示的两位小数比较，结果一致即写「与上周持平」，不出现「下降0.00%」
 // 8、前三周环比：趋势（数据不足时 8 行为「数据不足」且相关环比句省略）
 function genWeekReportText(weekData, prevWeekData) {
     var lines = [];
@@ -3576,9 +3577,12 @@ function genWeekReportText(weekData, prevWeekData) {
     var topStr = personList.length > 0 ? '  （' + personList.map(function(p) { return p.name + '：' + p.sampling; }).join('  ') + '）' : '';
 
     var curSampling = weekData.totalSampling;
-    var effCur = Math.round(curSampling / 7);
+    // 人效口径（2026-10-26 用户定）：分母=本周有效抽检天数（有抽检记录的天数，与 KPI「抽检日均人效」一致），不再固定 /7
+    var curDays = weekData.activeDays || 0;
+    var effCur = weekData.dailyAvgEfficiency != null ? weekData.dailyAvgEfficiency : (curDays > 0 ? Math.round(curSampling / curDays) : 0);
     var prevSampling = prevWeekData ? prevWeekData.totalSampling : null;
-    var effPrev = prevWeekData ? Math.round(prevWeekData.totalSampling / 7) : null;
+    var prevDays = prevWeekData ? (prevWeekData.activeDays || 0) : 0;
+    var effPrev = prevWeekData ? (prevWeekData.dailyAvgEfficiency != null ? prevWeekData.dailyAvgEfficiency : (prevDays > 0 ? Math.round(prevWeekData.totalSampling / prevDays) : 0)) : null;
 
     // —— 1、本周抽检总量 + 线上/实物（占比）——
     var sDiff = '';
@@ -3601,7 +3605,7 @@ function genWeekReportText(weekData, prevWeekData) {
         else if (de < 0) eDiff = '，环比下降' + (-de) + '台';
         else eDiff = '，环比持平';
     }
-    lines.push('2、抽检人效：' + curSampling + '/7≈' + effCur + eDiff);
+    lines.push('2、抽检人效：' + curSampling + '/' + curDays + '≈' + effCur + eDiff);
 
     // —— 3、判责量 ——
     var jDiff = '';
@@ -3614,11 +3618,14 @@ function genWeekReportText(weekData, prevWeekData) {
     lines.push('3、判责量：' + weekData.judgmentCount + jDiff);
 
     // —— 4/5/7：比率类指标（覆盖率/抽检准确率/判责准确率）用百分点 diff ——
+    // 2026-10-26 用户定：先按展示的两位小数取整再比较——显示结果一致就写「与上周持平」，
+    // 避免 99.90% vs 99.902% 这种被写成「较上周下降0.00%」。
     function ratioDiff(cur, prev) {
-        var d = cur - prev;
+        var curTxt = cur.toFixed(2), prevTxt = prev.toFixed(2);
+        if (curTxt === prevTxt) return '，与上周持平';
+        var d = Number(curTxt) - Number(prevTxt);
         if (d > 0) return '，较上周提升' + d.toFixed(2) + '%';
-        if (d < 0) return '，较上周下降' + (-d).toFixed(2) + '%';
-        return '，与上周持平';
+        return '，较上周下降' + (-d).toFixed(2) + '%';
     }
     lines.push('4、抽检覆盖率(15%)：' + weekData.coverage.toFixed(2) + '%' + (prevWeekData ? ratioDiff(weekData.coverage, prevWeekData.coverage) : ''));
     lines.push('5、抽检准确率(99%)：' + weekData.accuracy.toFixed(2) + '%' + (prevWeekData ? ratioDiff(weekData.accuracy, prevWeekData.accuracy) : ''));
