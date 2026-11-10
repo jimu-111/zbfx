@@ -3187,7 +3187,8 @@ function buildDimCompareTable(dimId, srcSeries, curWd, prevWd, curStat, prevStat
 }
 
 // 2026-11-09 用户定：失误类别排比卡里，来源=QA 的失误不再按原类别拆分，统一合并成「QA失误」
-// —— 只作用于本卡；汇总对比表/走势卡/详细分析仍各按原口径，原始 rows/persons 不动
+// 2026-11-10 用户定：月内周度失误走势卡（按类别）也用同一口径，两张并排卡行集一致
+// —— 只作用于这两张卡；汇总对比表/详细分析仍各按原口径，原始 rows/persons 不动
 function _collapseQaForTopList(stat) {
     if (!stat || !stat.rows) return stat;
     var map = {};
@@ -3260,7 +3261,9 @@ function buildWeekTrendCard(rows, cats, wd, accent) {
         var wi = Math.floor((er.date.getTime() - firstMon.getTime()) / (7 * DAY));
         if (wi < 0 || wi >= weeks.length) return;
         var w = weeks[wi];
-        w.cats[er.category] = (w.cats[er.category] || 0) + 1;
+        // 2026-11-10 用户定：与左侧 📈 排比卡同口径——来源=QA 统一记「QA失误」，不再按原类别拆
+        var cname = (er.source === 'QA') ? 'QA失误' : (er.category || '未分类');
+        w.cats[cname] = (w.cats[cname] || 0) + 1;
         w.total++;
     });
     if (weeks.length === 0) return '';
@@ -3323,19 +3326,21 @@ function buildWeekTrendCard(rows, cats, wd, accent) {
 // renderPersonTable 渲染时已将其刷新为当前全部窗口）；各周档按当前联动维度（dimId=monthErrDim）
 // 独立统计各类别失误条数（monthDimStat 复用周窗过滤+站点+类别规则）；类别行序=当前档类别榜（与左侧排比卡同序）。
 // 与 KPI 表头同口径：列名=真实周期周号（如「8月第3周」），随选中周档移动；选中档恒在第 1 列（页内选中=“本周”语义）。
+// 2026-11-10 用户定：与左侧 📈 排比卡同口径——来源=QA 统一记「QA失误」，不按原类别拆
 function buildWeekSeqTrendCard(dimId, curStat, accent) {
     // 颜色深浅：0.08(浅)~0.93(最深)，对应 v/gMax（与 buildWeekTrendCard 同款）
     function withAlpha(hex, a) {
         var n = parseInt(hex.slice(1), 16);
         return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a.toFixed(2) + ')';
     }
+    curStat = _collapseQaForTopList(curStat);
     var all = window._allWeeksCache || [];
     var from = getCurIndex();
     var weeks = [];
     for (var i = 0; i < 4 && from + i < all.length; i++) {
         var wd = all[from + i];
         if (!wd || !wd.monday) break;
-        var st = monthDimStat(dimId, wd);
+        var st = _collapseQaForTopList(monthDimStat(dimId, wd));
         var mp = {};
         st.cats.forEach(function(c) { mp[c.name] = c.count; });
         weeks.push({ wd: wd, total: st.total, map: mp });
@@ -3472,7 +3477,7 @@ function renderDimAnalysis(curWd, prevWd) {
     if (isMonth) {
         html += '<div class="m-flex2">' +
             buildTopListCard(curStat, prevStat, uw) +
-            buildWeekTrendCard(curStat.rows, curStat.cats, curWd, accent) +
+            buildWeekTrendCard(curStat.rows, _collapseQaForTopList(curStat).cats, curWd, accent) +
             '</div>';
         html += buildErrSummaryEditor(curStat, prevStat, monthErrDim, true, summaryRoster);   // 📝 失误分析总结（自动生成）
     } else {
