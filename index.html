@@ -446,10 +446,14 @@ let currentSite = '成都';       // 当前站点筛选：默认成都
 let dataReady = false;
 // ===== 周期维度（2026-09-05）：'week'=周（默认，原逻辑不变）| 'month'=月（逻辑月=上月27~本月26）=====
 let viewUnit = 'week';          // 当前维度
-let monthOptions = [];          // 月选项 [本月, 上月] {label,monday,sunday,isCurrent}
-let currentMonthIndex = 0;      // 0=本月, 1=上月
-let _windowStartDate = null;    // 最近一次首批拉取的全窗口起点（判断月补拉是否已覆盖）
-let _initRunning = false;       // initData 双批加载中（防止切月补拉与加载竞态）
+let monthOptions = [];          // 月选项（新→旧）：当前逻辑月 ~ 2026-07（2026-11-10 起不再固定两个月）
+let currentMonthIndex = 0;      // 0=当前逻辑月
+const MONTH_FLOOR = new Date(2026, 5, 27, 0, 0, 0, 0);   // 月度历史下限：2026-07 逻辑月起（06/27）
+let _loadedStart = null;        // 最近一次完整加载的数据窗口起点（两批合并后）
+let _loadedEnd = null;          // 最近一次完整加载的数据窗口终点
+let _rangeLoading = false;      // 按需拉取中（选月/切回周视图）
+let _pendingRangeReload = false;// 拉取中又换了周期 → 收尾后再补一次
+let _initRunning = false;       // initData 双批加载中（防止按需补拉与加载竞态）
 let _pendingUnitReload = false; // 加载中收到补拉请求 → 收尾后自动重跑
 
 // ==================== 2b. 名字修正（与优学堂后台 fixFeishuChouJianName 一致） ====================
@@ -746,12 +750,10 @@ function buildWeekOptions() {
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var thisMonday = getMonday(today);
     var options = [];
-    // 默认5周（原逻辑）；月补拉后内存数据起点提前（_windowStartDate）→ 周下拉顺带扩档到全部内存周
-    var minM = (_windowStartDate && viewUnit === 'month') ? getMonday(_windowStartDate) : null;
-    for (var w = 0; w < (minM ? 30 : 5); w++) {
+    // 2026-11-10 用户定：周视图固定「本周 + 前 4 周」= 5 周，不随月视图历史加载扩档
+    for (var w = 0; w < 5; w++) {
         var monday = new Date(thisMonday);
         monday.setDate(thisMonday.getDate() - w * 7);
-        if (minM && monday.getTime() < minM.getTime()) break;
         var sunday = getSunday(monday);
         var label = getWeekLabel(monday) + '（' + formatShortDate(monday) + '~' + formatShortDate(sunday) + '）';
         options.push({ label: label, monday: monday, sunday: sunday, isCurrent: w === 0 });
@@ -760,29 +762,61 @@ function buildWeekOptions() {
 }
 
 function buildMonthOptions() {
-    // 逻辑月选项：[本月(27~26), 上月(27~26)]；如 2026-09-05 → [9月(08/27~09/26), 8月(07/27~08/26)]
+    // 2026-11-10 用户定：从 2026-07 逻辑月（06/27）连续列到当前逻辑月，新→旧
+    // 连续列保证「选定月 vs 上一个逻辑月」永远相邻，不会因为某月没数据而跳过
     var now = new Date();
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var cur = getLogicMonthOfDate(today);
-    function mk(lm, ly, isCurrent) {
+    var opts = [];
+    var lm = cur.lm, ly = cur.ly;
+    while (true) {
         var r = getLogicMonthRange(lm, ly);
-        return {
+        if (r.monday.getTime() < MONTH_FLOOR.getTime()) break;
+        opts.push({
             label: monthLabelOf(r.monday) + '（' + formatShortDate(r.monday) + '~' + formatShortDate(r.sunday) + '）',
-            monday: r.monday, sunday: r.sunday, isCurrent: isCurrent
-        };
+            monday: r.monday, sunday: r.sunday, isCurrent: opts.length === 0
+        });
+        lm--;
+        if (lm < 0) { lm = 11; ly--; }
     }
-    return [mk(cur.lm, cur.ly, true), mk(cur.lm - 1, cur.ly, false)];
+    return opts;
+}
+
+// 上一个逻辑月窗口：早于数据下限（2026-06-27）返回 null → 该月没有环比
+function prevLogicMonthRange(wd) {
+    if (!wd || !wd.monday) return null;
+    var s = new Date(wd.monday.getFullYear(), wd.monday.getMonth() - 1, 27, 0, 0, 0, 0);
+    if (s.getTime() < MONTH_FLOOR.getTime()) return null;
+    var e = new Date(wd.monday.getFullYear(), wd.monday.getMonth(), 26, 23, 59, 59, 999);
+    return { monday: s, sunday: e };
+}
+
+// 今天 23:59:59.999：周期终点在未来时，覆盖判断只算到今天
+function endOfToday() {
+    var d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d;
+}
+
+// 已完整加载的数据窗口是否覆盖 [start, end]
+function loadedCovers(start, end) {
+    if (!start || !end || !_loadedStart || !_loadedEnd) return false;
+    return _loadedStart.getTime() <= start.getTime() && _loadedEnd.getTime() >= end.getTime();
 }
 
 // ===== 周期维度薄封装（周/月共用，2026-09-05）=====
-function getPeriodOptions() { return viewUnit === 'month' ? monthOptions : weekOptions; }
+function getPeriodOptions() {
+    if (viewUnit === 'month' && monthOptions.length === 0) monthOptions = buildMonthOptions();
+    return viewUnit === 'month' ? monthOptions : weekOptions;
+}
 function getCurIndex() { return viewUnit === 'month' ? currentMonthIndex : currentWeekIndex; }
 function periodDepth() { return viewUnit === 'month' ? 2 : 4; } // 数据列+趋势窗口的周期数：周=4，月=2
 function getPeriodLabel(wd) { return viewUnit === 'month' ? monthLabelOf(wd.monday) : getWeekLabel(wd.monday); }
 function unitWords(idx) {
-    // 周期文案：周=本周/上周；月=本月/上月（选中上月时无环比词）
+    // 周期文案：周=本周/上周；月=本月/上月（均指「选中周期」与其上一周期；最早一月没有环比）
     if (viewUnit === 'week') return { cur: '本周', prev: '上周' };
-    return idx === 0 ? { cur: '本月', prev: '上月' } : { cur: '上月', prev: null };
+    var hasPrev = (monthOptions.length > 0) && (idx + 1 < monthOptions.length);
+    return { cur: '本月', prev: hasPrev ? '上月' : null };
 }
 function parseDateValue(val) {
     if (!val) return null;
@@ -963,28 +997,79 @@ async function locateStartRow(spreadsheetToken, sheetId, token, targetDate, buff
     }
 }
 
-function getFetchTargets() {
-    // 拉取窗口目标（2026-09-05 按维度）：周=原5周两批不变；月=首批本月27日~今天、二批上月27日~26日
-    if (viewUnit === 'month') {
-        var mo = buildMonthOptions();
-        var now = new Date();
-        var todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-        return { firstStart: mo[0].monday, firstEnd: todayEnd, fullStart: mo[1].monday, fullEnd: mo[1].sunday };
+// 从缓存的 A 列找 <= endDate 的最后一行（1-based）；缓存未建立返回 null，窗口内无数据返回 0
+// 用于把读取区间从「起点→表尾」收窄到「起点→窗口终点」：按月回看历史时不会把后面几个月全拉进来
+function locateEndRow(sheetId, endDate) {
+    var cache = _columnACache[sheetId];
+    if (!cache || !cache.colA || !endDate) return null;
+    var last = 0;
+    for (var i = 0; i < cache.colA.length; i++) {
+        var d = parseDateValue(cache.colA[i] && cache.colA[i][0]);
+        if (d && d.getTime() <= endDate.getTime() && i + 1 > last) last = i + 1;
     }
-    var wk = buildWeekOptions();
-    // 与原逻辑对应：首批判责量[2周前周一,本周日]、二批[5周前周一,3周前周日]
-    return { firstStart: wk[1].monday, firstEnd: wk[0].sunday, fullStart: wk[4].monday, fullEnd: wk[2].sunday };
+    return last;
 }
 
-async function fetchAllData(token, phase) {
+function getFetchTargets() {
+    // 拉取窗口（2026-11-10 按需）：周=本周+前4周；月=选定逻辑月+上一个逻辑月
+    // firstXxx = 首批（先渲染选定月/最近2周）；fullXxx = 二批（补上一月/更早3周）
+    // windowStart/windowEnd = 两批合并后的完整覆盖范围（判断是否需要补拉）
+    var todayEnd = endOfToday();
+    if (viewUnit === 'month') {
+        var opts = getPeriodOptions();
+        var idx = Math.max(0, Math.min(currentMonthIndex, opts.length - 1));
+        var curWd = opts[idx];
+        var prevWd = prevLogicMonthRange(curWd);
+        var curEnd = new Date(Math.min(curWd.sunday.getTime(), todayEnd.getTime()));
+        return {
+            firstStart: curWd.monday, firstEnd: curEnd,
+            fullStart: prevWd ? prevWd.monday : curWd.monday,
+            fullEnd: prevWd ? prevWd.sunday : curEnd,
+            windowStart: prevWd ? prevWd.monday : curWd.monday,
+            windowEnd: curEnd,
+            hasPrev: !!prevWd
+        };
+    }
+    var wk = (weekOptions && weekOptions.length >= 5) ? weekOptions : buildWeekOptions();
+    // 与原逻辑对应：首批[2周前周一,本周日]、二批[5周前周一,3周前周日]
+    return {
+        firstStart: wk[1].monday, firstEnd: wk[0].sunday,
+        fullStart: wk[4].monday, fullEnd: wk[2].sunday,
+        windowStart: wk[4].monday,
+        windowEnd: new Date(Math.min(wk[0].sunday.getTime(), todayEnd.getTime())),
+        hasPrev: true
+    };
+}
+
+// 当前选择真正需要的数据范围（周=5周；月=选定月+上一月）
+function getCurrentNeedRange() {
+    var todayEnd = endOfToday();
+    if (viewUnit === 'month') {
+        var opts = getPeriodOptions();
+        if (!opts.length) return null;
+        var idx = Math.max(0, Math.min(currentMonthIndex, opts.length - 1));
+        var curWd = opts[idx];
+        var prevWd = prevLogicMonthRange(curWd);
+        return {
+            start: prevWd ? prevWd.monday : curWd.monday,
+            end: new Date(Math.min(curWd.sunday.getTime(), todayEnd.getTime()))
+        };
+    }
+    var wk = (weekOptions && weekOptions.length >= 5) ? weekOptions : buildWeekOptions();
+    return { start: wk[4].monday, end: new Date(Math.min(wk[0].sunday.getTime(), todayEnd.getTime())) };
+}
+
+async function fetchAllData(token, phase, tg) {
     // phase: 'first2'=首批（失误表读完整窗口，抽检表读首批窗口，先渲染）| 'rest2'=二批（抽检表补完整窗口剩余）
     var isRest = (phase === 'rest2');
     var phaseLabel = isRest ? '[二批]' : '[首批]';
-    var tg = getFetchTargets();
-    var targetFirst = tg.firstStart; // 首批抽检表起点（周=2周前周一；月=本月27日）
-    var targetAll = tg.fullStart;    // 完整窗口起点（周=5周前周一；月=上月27日）
-    var BUFFER_ROWS = 500;           // 定位起点往前多读的兜底行数（约1天数据）
-    if (!isRest) _windowStartDate = targetAll; // 记录全窗口起点（供切月补拉判断，2026-09-05）
+    tg = tg || getFetchTargets();
+    var targetFirst = tg.firstStart;       // 首批抽检表起点（周=2周前周一；月=选定月27日）
+    var targetAll = tg.fullStart;          // 二批/失误表起点（周=5周前周一；月=上一月27日）
+    var targetFirstEnd = tg.firstEnd;      // 首批终点（周=本周日；月=选定月26日/今天）
+    var targetRestEnd = tg.fullEnd;        // 二批终点（周=3周前周日；月=上一月26日）
+    var targetWindowEnd = tg.windowEnd;    // 失误表完整窗口终点（周=本周日；月=选定月26日/今天）
+    var BUFFER_ROWS = 500;                 // 定位起点往前多读的兜底行数（约1天数据）
 
     // 先查所有sheet的行数（元数据，很快），两阶段共用缓存
     if (!_sheetRowCounts) {
@@ -1009,6 +1094,7 @@ async function fetchAllData(token, phase) {
     // 独立域名，与飞书请求并行，不参与飞书串行队列
     var supabaseTask = (async function() {
         var t0 = Date.now();
+        if (isRest && !tg.hasPrev) return { ok: true, type: 'panze_supabase', name: 'Supabase判责量', dailyList: [] };
         try {
             var monday = isRest ? tg.fullStart : tg.firstStart;
             var sunday = isRest ? tg.fullEnd : tg.firstEnd;
@@ -1051,13 +1137,21 @@ async function fetchAllData(token, phase) {
                     continue;
                 }
                 var loc = await locateStartRow(FEISHU_CONFIG.spreadsheetToken, sh.id, token, targetAll, BUFFER_ROWS);
-                var range;
+                var range = null;
                 if (loc) {
-                    range = 'A' + loc.startRow + ':' + sh.colEnd + loc.endRow;
+                    var endRow = locateEndRow(sh.id, targetWindowEnd);
+                    if (endRow === null) endRow = loc.endRow;
+                    endRow = Math.min(endRow, loc.endRow);
+                    if (endRow >= loc.startRow) range = 'A' + loc.startRow + ':' + sh.colEnd + endRow;
                 } else {
                     // 定位失败：退化为表尾1500行估算（覆盖5周约250条，余量充足）
                     var rcF = sheetRowCounts[sh.id] || 0;
                     range = 'A' + Math.max(2, rcF - 1499) + ':' + sh.colEnd + rcF;
+                }
+                if (!range) {
+                    console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 窗口内无数据，跳过读取');
+                    results.push({ ok: true, source: sh.source, name: sh.name, rows: [] });
+                    continue;
                 }
                 var rows = await fetchFeishuSheet(FEISHU_CONFIG.spreadsheetToken, sh.id, token, range);
                 console.log('[计时] ' + phaseLabel + ' 失误表 ' + sh.name + ' 耗时 ' + (Date.now() - t0) + 'ms, 行数 ' + rows.length + ' (range:' + range + ')');
@@ -1075,7 +1169,9 @@ async function fetchAllData(token, phase) {
                 var range2 = null, rows2 = [];
                 var loc2 = await locateStartRow(sh2.token, sh2.id, token, isRest ? targetAll : targetFirst, BUFFER_ROWS);
                 if (loc2) {
-                    var start2 = loc2.startRow, end2 = loc2.endRow;
+                    var start2 = loc2.startRow, end2 = locateEndRow(sh2.id, isRest ? targetRestEnd : targetFirstEnd);
+                    if (end2 === null) end2 = loc2.endRow;
+                    end2 = Math.min(end2, loc2.endRow);
                     if (isRest) {
                         // 二批：上界=首批起点-1（复用首批定位结果，避免与首批重叠读取）
                         var firstLoc = _sheetLocCache[sh2.id];
@@ -3794,11 +3890,10 @@ function renderAll(weekData, allWeeks) {
 
 // ==================== 9. 交互 ====================
 // ===== 周期维度 UI（周/月共用，2026-09-05）=====
-// 某周期数据是否不完整：月模式下内存窗口起点晚于上月27日 → 上月列仅部分数据（首帧灰色「(部分)」角标）
+// 某周期数据是否不完整：已加载窗口起点晚于该周期起点 → 该周期仅部分数据（灰色「(部分)」角标）
 function isPartialPeriod(wd) {
-    if (!wd || viewUnit !== 'month' || !monthOptions[1]) return false;
-    return wd.monday.getTime() === monthOptions[1].monday.getTime() &&
-        !(_windowStartDate && _windowStartDate <= monthOptions[1].monday);
+    if (!wd || viewUnit !== 'month' || !_loadedStart) return false;
+    return _loadedStart.getTime() > wd.monday.getTime();
 }
 
 // 周期标签 + 部分数据灰标（表头用）
@@ -3822,6 +3917,7 @@ function switchPeriod(index) {
     }
     populatePeriodSelect();
     refreshView();
+    ensureDataForCurrentView();  // 选定周期不在已加载窗口内 → 提示并补拉
 }
 
 // 填充周期下拉选项 + ◀▶ 按钮态 + 维度文案（首次加载/切换周期/刷新共用）
@@ -3864,11 +3960,9 @@ function switchUnit(unit) {
     document.querySelectorAll('#unitSwitch .unit-switch-btn').forEach(function(b) {
         b.classList.toggle('active', b.dataset.unit === unit);
     });
-    var monthNeeded = buildMonthOptions()[1]; // 上月逻辑月起点（如 7/27）
-    var needBackfill = (unit === 'month' && !(_windowStartDate && _windowStartDate <= monthNeeded.monday));
     populatePeriodSelect();
     refreshView();
-    if (needBackfill) ensureMonthData();  // 先渲染首帧（本月完整、上月(部分)），拉完自动重渲染
+    ensureDataForCurrentView();  // 目标周/月窗口未被已加载数据覆盖 → 提示并补拉
 }
 
 function refreshView() {
@@ -4048,11 +4142,8 @@ async function initData(silent) {
         _initRunning = false;
         if (_pendingUnitReload) {
             _pendingUnitReload = false;
-            // 补拉请求在加载期间到达：收尾后若仍是月视图且覆盖不足 → 走 ensureMonthData 完整流程（提示→拉取→✅）
-            var mo = buildMonthOptions();
-            if (viewUnit === 'month' && !(_windowStartDate && _windowStartDate <= mo[1].monday)) {
-                setTimeout(function() { ensureMonthData(); }, 30);
-            }
+            // 加载期间到达的补拉请求：收尾后按当前选中周期重新判断覆盖
+            setTimeout(function() { ensureDataForCurrentView(); }, 30);
         }
     };
 
@@ -4072,26 +4163,32 @@ async function initData(silent) {
         }
 
         try {
-            // 第一批：首批窗口（周=最近2周；月=本月27日~今天），先渲染让界面尽快显示
-            var results1 = await fetchAllData(token, 'first2');
-            applyLoadedData(results1);
+            // 窗口目标只算一次，两批共用（避免加载中途切换周期导致两批窗口错位）
+            var tg = getFetchTargets();
+            // 第一批：周=最近2周；月=选定月（27日~今天/26日），先渲染让界面尽快显示
+            var results1 = await fetchAllData(token, 'first2', tg);
+            if (!tg.hasPrev) {
+                // 最早可选月没有上一个逻辑月：首批即完整窗口，二批无事可做
+                applyLoadedData(results1, { start: tg.windowStart, end: tg.windowEnd });
+            } else {
+                applyLoadedData(results1, { start: tg.firstStart, end: tg.firstEnd });
 
-            // 第二批：补齐完整窗口，后台加载完成后自动刷新界面
-            if (!silent) {
-                var tg2 = getFetchTargets();
-                var bannerTxt = viewUnit === 'month'
-                    ? '⏳ 已加载本月（' + formatShortDate(tg2.firstStart) + ' 起）数据，正在后台加载上月…'
-                    : '⏳ 已加载最近两周，正在后台加载第3~5周…';
-                document.getElementById('bannerArea').innerHTML = '<div class="info-banner">' + bannerTxt + '</div>';
-            }
-            try {
-                var results2 = await fetchAllData(token, 'rest2');
-                var merged = mergePhaseResults(results1, results2);
-                applyLoadedData(merged);
-            } catch(e) {
-                console.warn('[二批] 窗口数据加载失败，保持首批数据:', e.message);
+                // 第二批：补齐完整窗口，后台加载完成后自动刷新界面
                 if (!silent) {
-                    document.getElementById('bannerArea').innerHTML = '';
+                    var bannerTxt = viewUnit === 'month'
+                        ? '⏳ 已加载本月（' + formatShortDate(tg.firstStart) + ' 起）数据，正在后台加载上月…'
+                        : '⏳ 已加载最近两周，正在后台加载第3~5周…';
+                    document.getElementById('bannerArea').innerHTML = '<div class="info-banner">' + bannerTxt + '</div>';
+                }
+                try {
+                    var results2 = await fetchAllData(token, 'rest2', tg);
+                    var merged = mergePhaseResults(results1, results2);
+                    applyLoadedData(merged, { start: tg.windowStart, end: tg.windowEnd });
+                } catch(e) {
+                    console.warn('[二批] 窗口数据加载失败，保持首批数据:', e.message);
+                    if (!silent) {
+                        document.getElementById('bannerArea').innerHTML = '';
+                    }
                 }
             }
         } catch(e) {
@@ -4104,33 +4201,53 @@ async function initData(silent) {
     }
 }
 
-// 切到月维度时数据覆盖不足 → 全量补拉一次（2026-09-05）。补拉后 _windowStartDate <= 上月27日起点，不再重复触发
-async function ensureMonthData() {
-    var needed = buildMonthOptions()[1].monday; // 上月逻辑月起点（如 7/27）
-    if (_windowStartDate && _windowStartDate <= needed) return; // 已覆盖，无需补拉
-    if (_initRunning) { _pendingUnitReload = true; return; }    // 双批加载中 → 收尾自动补拉
+// 当前选中周期的数据不在已加载窗口内 → 按需补拉（2026-11-10）
+// 需要的范围：周=本周+前4周；月=选定逻辑月+上一逻辑月。最早可选月没有上一月，只拉本月
+async function ensureDataForCurrentView() {
+    var need = getCurrentNeedRange();
+    if (!need) return;
+    if (loadedCovers(need.start, need.end)) return;   // 已覆盖，无需补拉
+    if (_initRunning) { _pendingUnitReload = true; return; }  // 首次加载中 → 收尾后自动判断
+    if (_rangeLoading) { _pendingRangeReload = true; return; } // 补拉中 → 收尾后按新选择再补
+
+    _rangeLoading = true;
     document.getElementById('bannerArea').innerHTML =
-        '<div class="info-banner">⏳ 正在加载月数据（本月先显示已有数据，上月为部分数据）…</div>';
-    window._monthLoading = true;    // 补拉期间 applyLoadedData 不清理此提示
+        '<div class="info-banner">⏳ 正在加载所选' + (viewUnit === 'month' ? '月份' : '周期') + '数据…</div>';
     try {
-        await initData(true);   // silent：不清空现有视图，首批到后即全量重渲染
-    } catch(e) {
-        window._monthLoading = false;
+        var token = await acquireToken();
+        if (!token) { showAuthUI(); return; }
+        var tg = getFetchTargets();
+        var results1 = await fetchAllData(token, 'first2', tg);
+        if (tg.hasPrev) {
+            // 先渲染选定周期，再后台补上一个周期
+            applyLoadedData(results1, { start: tg.firstStart, end: tg.firstEnd });
+            var results2 = await fetchAllData(token, 'rest2', tg);
+            var merged = mergePhaseResults(results1, results2);
+            applyLoadedData(merged, { start: tg.windowStart, end: tg.windowEnd });
+        } else {
+            applyLoadedData(results1, { start: tg.windowStart, end: tg.windowEnd });
+        }
         document.getElementById('bannerArea').innerHTML =
-            '<div class="error-banner"><div><span class="error-title">❌ 月数据加载失败</span> — ' + (e.message || '') + '</div><button class="btn btn-sm" onclick="ensureMonthData()">🔄 重试</button></div>';
-        return;
+            '<div class="info-banner" style="background:#e6f7e6;border-color:#b8e6b8;color:#27ae60;">✅ 数据加载完成</div>';
+        setTimeout(function() {
+            var b = document.getElementById('bannerArea');
+            if (b) b.innerHTML = '';
+        }, 2200);
+    } catch(e) {
+        document.getElementById('bannerArea').innerHTML =
+            '<div class="error-banner"><div><span class="error-title">❌ 数据加载失败</span> — ' + ((e && e.message) || '') + '</div><button class="btn btn-sm" onclick="ensureDataForCurrentView()">🔄 重试</button></div>';
+    } finally {
+        _rangeLoading = false;
+        if (_pendingRangeReload) {
+            _pendingRangeReload = false;
+            setTimeout(function() { ensureDataForCurrentView(); }, 30);
+        }
     }
-    window._monthLoading = false;
-    document.getElementById('bannerArea').innerHTML =
-        '<div class="info-banner" style="background:#e6f7e6;border-color:#b8e6b8;color:#27ae60;">✅ 月数据加载完成</div>';
-    setTimeout(function() {
-        var b = document.getElementById('bannerArea');
-        if (b) b.innerHTML = '';
-    }, 2200);
 }
 
 // 应用已拉取结果：解析、更新全局数据并渲染界面（首批/合并后各调一次）
-function applyLoadedData(results) {
+// coverage：本次结果实际覆盖的时间窗口（start/end），用于判断后续要不要补拉
+function applyLoadedData(results, coverage) {
     var processed = processResults(results);
 
     // 检查是否全部失败
@@ -4145,6 +4262,10 @@ function applyLoadedData(results) {
 
     allErrors = processed.errors;
     samplingData = processed.sampling;
+    if (coverage && coverage.start && coverage.end) {
+        _loadedStart = coverage.start;
+        _loadedEnd = coverage.end;
+    }
     weekOptions = buildWeekOptions();
     monthOptions = buildMonthOptions();
     // 保持当前选择，不强制跳回（周/月各自记住位置）
@@ -4155,8 +4276,8 @@ function applyLoadedData(results) {
     populatePeriodSelect();
 
     document.getElementById('loadingArea').style.display = 'none';
-    // 月补拉（_monthLoading）期间保留顶部「⏳ 正在加载月数据…」提示，补拉完成后由 ensureMonthData 替换为 ✅
-    if (!window._monthLoading) document.getElementById('bannerArea').innerHTML = '';
+    // 按需补拉（_rangeLoading）期间保留顶部「⏳ 正在加载…」提示，由 ensureDataForCurrentView 收尾替换为 ✅
+    if (!_rangeLoading) document.getElementById('bannerArea').innerHTML = '';
 
     // 显示各Sheet加载状态
     var statusParts = [];
