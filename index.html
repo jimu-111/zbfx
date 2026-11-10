@@ -3251,6 +3251,14 @@ function buildWeekTrendCard(rows, cats, wd, accent) {
     }
     var s = wd.monday, e = wd.sunday;
     var DAY = 86400000;
+    // 2026-11-10 用户定：首周归属看 27 日（逻辑月起点）在周几——
+    // 周一~周三（周四以前）：该周算「上一个月的最后一周」，表头写「上月末周」（数据照常显示，不丢）
+    // 周四~周日（周四及以后）：该周算「本月第一周」，表头从「第1周」起
+    var firstIsPrevMonth = [1, 2, 3].indexOf(s.getDay()) >= 0;
+    function weekTitle(wi) {
+        if (wi === 0 && firstIsPrevMonth) return '上月末周';
+        return '第' + (wi + 1 - (firstIsPrevMonth ? 1 : 0)) + '周';
+    }
     var firstMon = new Date(s.getFullYear(), s.getMonth(), s.getDate() - ((s.getDay() + 6) % 7));
     var weeks = [];
     for (var t = new Date(firstMon.getTime()); t.getTime() <= e.getTime(); t = new Date(t.getTime() + 7 * DAY)) {
@@ -3283,7 +3291,7 @@ function buildWeekTrendCard(rows, cats, wd, accent) {
     weeks.forEach(function(w, wi) {
         var end = new Date(w.start.getTime() + 6 * DAY);
         html += '<div class="ewt-h" title="' + formatDate(w.start) + ' ~ ' + formatDate(end) + '">' +
-            '<div>第' + (wi + 1) + '周</div><div class="ewt-date">' + formatShortDate(w.start) + '起</div></div>';
+            '<div>' + weekTitle(wi) + '</div><div class="ewt-date">' + formatShortDate(w.start) + '起</div></div>';
     });
     html += '</div>';
 
@@ -3316,7 +3324,7 @@ function buildWeekTrendCard(rows, cats, wd, accent) {
         else notes.push('末周为部分周，只统计本月内日期');
     }
     if (gMax > 1) notes.push('格子颜色越深 = 当周该类条数越多');
-    if (weeks[peakW].total > 0) notes.push('全月峰值：第' + (peakW + 1) + '周（' + formatShortDate(weeks[peakW].start) + '起 · 共' + weeks[peakW].total + '条）');
+    if (weeks[peakW].total > 0) notes.push('全月峰值：' + weekTitle(peakW) + '（' + formatShortDate(weeks[peakW].start) + '起 · 共' + weeks[peakW].total + '条）');
     html += '<div class="ewt-note">' + notes.join(' · ') + '</div>';
     return html + '</div>';
 }
