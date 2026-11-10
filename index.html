@@ -782,12 +782,13 @@ function buildMonthOptions() {
     return opts;
 }
 
-// 上一个逻辑月窗口：早于数据下限（2026-06-27）返回 null → 该月没有环比
-function prevLogicMonthRange(wd) {
+// 往回第 n 个逻辑月窗口（n=1 即上一月，n=2 即上上月）；早于数据下限（2026-06-27）返回 null
+function prevLogicMonthRange(wd, n) {
     if (!wd || !wd.monday) return null;
-    var s = new Date(wd.monday.getFullYear(), wd.monday.getMonth() - 1, 27, 0, 0, 0, 0);
+    n = n || 1;
+    var s = new Date(wd.monday.getFullYear(), wd.monday.getMonth() - n, 27, 0, 0, 0, 0);
     if (s.getTime() < MONTH_FLOOR.getTime()) return null;
-    var e = new Date(wd.monday.getFullYear(), wd.monday.getMonth(), 26, 23, 59, 59, 999);
+    var e = new Date(wd.monday.getFullYear(), wd.monday.getMonth() - n + 1, 26, 23, 59, 59, 999);
     return { monday: s, sunday: e };
 }
 
@@ -810,7 +811,7 @@ function getPeriodOptions() {
     return viewUnit === 'month' ? monthOptions : weekOptions;
 }
 function getCurIndex() { return viewUnit === 'month' ? currentMonthIndex : currentWeekIndex; }
-function periodDepth() { return viewUnit === 'month' ? 2 : 4; } // 数据列+趋势窗口的周期数：周=4，月=2
+function periodDepth() { return viewUnit === 'month' ? 3 : 4; } // 数据列+趋势窗口的周期数：周=4，月=3（2026-11-10 用户定：月视图 3 个月对比）
 function getPeriodLabel(wd) { return viewUnit === 'month' ? monthLabelOf(wd.monday) : getWeekLabel(wd.monday); }
 function unitWords(idx) {
     // 周期文案：周=本周/上周；月=本月/上月（均指「选中周期」与其上一周期；最早一月没有环比）
@@ -1011,23 +1012,26 @@ function locateEndRow(sheetId, endDate) {
 }
 
 function getFetchTargets() {
-    // 拉取窗口（2026-11-10 按需）：周=本周+前4周；月=选定逻辑月+上一个逻辑月
-    // firstXxx = 首批（先渲染选定月/最近2周）；fullXxx = 二批（补上一月/更早3周）
+    // 拉取窗口（2026-11-10 按需）：周=本周+前4周；月=选定逻辑月+前两个逻辑月（3 个月对比）
+    // firstXxx = 首批（先渲染选定月/最近2周）；fullXxx = 二批（补前两个月/更早3周）
     // windowStart/windowEnd = 两批合并后的完整覆盖范围（判断是否需要补拉）
     var todayEnd = endOfToday();
     if (viewUnit === 'month') {
         var opts = getPeriodOptions();
         var idx = Math.max(0, Math.min(currentMonthIndex, opts.length - 1));
         var curWd = opts[idx];
-        var prevWd = prevLogicMonthRange(curWd);
+        var prev1 = prevLogicMonthRange(curWd, 1);
+        var prev2 = prevLogicMonthRange(curWd, 2);
         var curEnd = new Date(Math.min(curWd.sunday.getTime(), todayEnd.getTime()));
+        var restStart = prev1 ? (prev2 ? prev2.monday : prev1.monday) : curWd.monday;
+        var restEnd = prev1 ? prev1.sunday : curEnd;
         return {
             firstStart: curWd.monday, firstEnd: curEnd,
-            fullStart: prevWd ? prevWd.monday : curWd.monday,
-            fullEnd: prevWd ? prevWd.sunday : curEnd,
-            windowStart: prevWd ? prevWd.monday : curWd.monday,
+            fullStart: restStart, fullEnd: restEnd,
+            windowStart: restStart,
             windowEnd: curEnd,
-            hasPrev: !!prevWd
+            hasPrev: !!prev1,
+            hasPrev2: !!prev2
         };
     }
     var wk = (weekOptions && weekOptions.length >= 5) ? weekOptions : buildWeekOptions();
@@ -1041,7 +1045,7 @@ function getFetchTargets() {
     };
 }
 
-// 当前选择真正需要的数据范围（周=5周；月=选定月+上一月）
+// 当前选择真正需要的数据范围（周=5周；月=选定月+前两个逻辑月）
 function getCurrentNeedRange() {
     var todayEnd = endOfToday();
     if (viewUnit === 'month') {
@@ -1049,9 +1053,11 @@ function getCurrentNeedRange() {
         if (!opts.length) return null;
         var idx = Math.max(0, Math.min(currentMonthIndex, opts.length - 1));
         var curWd = opts[idx];
-        var prevWd = prevLogicMonthRange(curWd);
+        var prev1 = prevLogicMonthRange(curWd, 1);
+        var prev2 = prevLogicMonthRange(curWd, 2);
+        var start = prev2 ? prev2.monday : (prev1 ? prev1.monday : curWd.monday);
         return {
-            start: prevWd ? prevWd.monday : curWd.monday,
+            start: start,
             end: new Date(Math.min(curWd.sunday.getTime(), todayEnd.getTime()))
         };
     }
@@ -1512,14 +1518,14 @@ function getLightTag(rate) {
 
 // ==================== 8. UI渲染 ====================
 function renderKpiTable(weekData, allWeeks) {
-    // 取周期窗口数据（周=4周：选中周+前3周；月=2月：本月+上月）；数据不足的列填空
+    // 取周期窗口数据（周=4周：选中周+前3周；月=3月：选定月+前两个月）；数据不足的列填空
     var depth = periodDepth();
     var weeks = [];
     for (var w = 0; w < depth; w++) {
         var idx = getCurIndex() + w;
         weeks.push((idx < allWeeks.length && allWeeks[idx]) ? allWeeks[idx] : null);
     }
-    // weeks[0]=选中周期, weeks[1]=上一周期, ...（月模式 weeks=[本月,上月] 或 [上月, 无]）
+    // weeks[0]=选中周期, weeks[1]=上一周期, weeks[2]=上上周期（月模式数据不足时尾部为 null）
 
     // 辅助：格式化环比（本周 vs 上周）
     function deltaVal(cur, prev, unit) {
@@ -1789,7 +1795,7 @@ function renderPersonTable(weekData, allWeeks) {
 
     var stats = sortPersonStats(weekData.personStats, personSortCol, personSortAsc);
 
-    // 构建每人最近周期准确率历史（以选定周期为基准往前取，周=4、月=2；索引0=最远, 索引N-1=选定周期，没数据的周期填null占位）
+    // 构建每人最近周期准确率历史（以选定周期为基准往前取，周=4、月=3；索引0=最远, 索引N-1=选定周期，没数据的周期填null占位）
     var accHistoryMap = {};
     var maxWeeks = Math.min(allWeeks.length - getCurIndex(), periodDepth());
     stats.forEach(function(p) { accHistoryMap[p.name] = new Array(maxWeeks).fill(null); });
@@ -3538,7 +3544,7 @@ function showTotalTrendPopup() {
     var sel = getCurIndex();
     var selLabel = allWeeks[sel] ? periodLabelHtml(allWeeks[sel]) : "";
 
-    // 收集近N周期汇总数据（从旧到新；周=4、月=2）
+    // 收集近N周期汇总数据（从旧到新；周=4、月=3）
     var rows = "";
     var popWeeks = [];
     for (var pw = Math.min(sel + periodDepth() - 1, allWeeks.length - 1); pw >= sel; pw--) {
@@ -4031,7 +4037,7 @@ function showPersonDetail(name) {
         html += '<div class="text-muted text-sm" style="text-align:center;padding:20px;">' + uw.cur + '无失误记录 ✅</div>';
     }
 
-    // 最近周期数据对比（以选定周期为基准往前取，周=4 / 月=2）
+    // 最近周期数据对比（以选定周期为基准往前取，周=4 / 月=3）
     var allWeeks = window._allWeeksCache || [];
     var weekHistory = [];
     var histDepth = periodDepth();
@@ -4176,7 +4182,7 @@ async function initData(silent) {
                 // 第二批：补齐完整窗口，后台加载完成后自动刷新界面
                 if (!silent) {
                     var bannerTxt = viewUnit === 'month'
-                        ? '⏳ 已加载本月（' + formatShortDate(tg.firstStart) + ' 起）数据，正在后台加载上月…'
+                        ? '⏳ 已加载所选月份（' + formatShortDate(tg.firstStart) + ' 起）数据，正在后台加载前两个月…'
                         : '⏳ 已加载最近两周，正在后台加载第3~5周…';
                     document.getElementById('bannerArea').innerHTML = '<div class="info-banner">' + bannerTxt + '</div>';
                 }
@@ -4202,7 +4208,7 @@ async function initData(silent) {
 }
 
 // 当前选中周期的数据不在已加载窗口内 → 按需补拉（2026-11-10）
-// 需要的范围：周=本周+前4周；月=选定逻辑月+上一逻辑月。最早可选月没有上一月，只拉本月
+// 需要的范围：周=本周+前4周；月=选定逻辑月+前两个逻辑月（越界时能拉到几个月算几个月）
 async function ensureDataForCurrentView() {
     var need = getCurrentNeedRange();
     if (!need) return;
