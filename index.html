@@ -2729,7 +2729,28 @@ function _errSummaryUpClause(names) {
     var s = _errSummaryNames(names);
     return s + (/失误$/.test(s) ? '上涨明显' : '失误上涨明显');
 }
-function buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster) {
+// 2026-11-10 用户定：月视图「失误分析总结」末尾追加两块（全来源口径，不随 5 卡维度变）：
+// 1. 失误来源环比（总失误数/初审/抽检/QA）
+// 2. 典型失误环比（明显失误=类别含「明显」跨来源；低级/投诉失误=类别含「低级」或「投诉」跨来源）
+function buildMonthErrTrendText(curSrc, prevSrc) {
+    if (!curSrc) return '';
+    function line(label, key) {
+        var cur = curSrc[key] || 0;
+        var s = '- ' + label + '：' + cur + '条';
+        if (prevSrc) {
+            var d = cur - (prevSrc[key] || 0);
+            if (d > 0) s += '，环比增加' + d + '条';
+            else if (d < 0) s += '，环比下降' + (-d) + '条';
+            else s += '，环比持平';
+        }
+        return s;
+    }
+    var srcLines = [line('总失误数', 'all'), line('初审失误', 'cs'), line('抽检失误', 'cj'), line('QA失误', 'qa')];
+    srcLines = srcLines.map(function(l, i) { return l + (i === srcLines.length - 1 ? '。' : (i === 0 ? '' : '；')); });
+    var typLines = [line('明显失误', 'obvious') + '；', line('低级/投诉失误', 'low') + '。'];
+    return '1. 失误来源环比：\n' + srcLines.join('\n') + '\n2. 典型失误环比：\n' + typLines.join('\n');
+}
+function buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster, curSrc, prevSrc) {
     var unitCur = isMonth ? '本月' : '本周';
     var unitPrev = isMonth ? '上月' : '上周';
     var mapQA = dimId !== 'QA';   // 看「QA」来源卡时全部都是 QA，不再折叠类别
@@ -2806,10 +2827,13 @@ function buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster) {
         lines.push(unitCur + '失误：上涨' + upN + '人，下降' + downN + '人，持平' + flatN + '人。');
     }
     // 每条前面加序号（2026-10-21 用户定：取消缩进，改（1）（2）（3）），复制出去也带序号
-    return lines.map(function(l, i) { return '（' + (i + 1) + '）' + l; }).join('\n');
+    var out = lines.map(function(l, i) { return '（' + (i + 1) + '）' + l; }).join('\n');
+    // 2026-11-10：月视图追加「失误来源环比 / 典型失误环比」两块（周视图不加）
+    if (isMonth && curSrc) out += '\n' + buildMonthErrTrendText(curSrc, prevSrc);
+    return out;
 }
-function buildErrSummaryEditor(curStat, prevStat, dimId, isMonth, curRoster) {
-    var txt = buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster);
+function buildErrSummaryEditor(curStat, prevStat, dimId, isMonth, curRoster, curSrc, prevSrc) {
+    var txt = buildErrSummaryText(curStat, prevStat, dimId, isMonth, curRoster, curSrc, prevSrc);
     return '<div id="errSummarySec" style="margin-top:14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
         '<div style="font-size:0.9rem;font-weight:700;color:#1e293b;">📝 失误分析总结（自动生成）</div>' +
@@ -3467,6 +3491,19 @@ function renderDimAnalysis(curWd, prevWd) {
     var prevStat = dc ? (prevWd ? stats[dc.id + '_prev'] : null) : prevStatAll;
     var accent = dc ? dc.accent : '#2a5298';
 
+    // 2026-11-10：月视图总结追加「失误来源环比 / 典型失误环比」的数据（全来源口径，不随 5 卡维度变）
+    var srcStatCur = null, srcStatPrev = null;
+    if (isMonth) {
+        srcStatCur = {
+            all: curStatAll.total, cs: stats['初审'].total, cj: stats['抽检'].total, qa: stats['QA'].total,
+            obvious: stats['明显失误'].total, low: stats['低级投诉'].total
+        };
+        if (prevWd) srcStatPrev = {
+            all: prevStatAll.total, cs: stats['初审_prev'].total, cj: stats['抽检_prev'].total, qa: stats['QA_prev'].total,
+            obvious: stats['明显失误_prev'].total, low: stats['低级投诉_prev'].total
+        };
+    }
+
     html += '<div class="dim-hint">' + (dc ? '当前仅看「' + dc.label + '」' : '默认口径：三来源合并统计（整合视图）') + ' · 点上方卡片切换维度，再点一次当前卡返回合计</div>';
 
     // 合计口径下对比表按来源逐列列出（初审/抽检/QA 带来源色点 + 类别数/涉及人员）
@@ -3487,7 +3524,8 @@ function renderDimAnalysis(curWd, prevWd) {
             buildTopListCard(curStat, prevStat, uw) +
             buildWeekTrendCard(curStat.rows, _collapseQaForTopList(curStat).cats, curWd, accent) +
             '</div>';
-        html += buildErrSummaryEditor(curStat, prevStat, monthErrDim, true, summaryRoster);   // 📝 失误分析总结（自动生成）
+        html += buildErrSummaryEditor(curStat, prevStat, monthErrDim, true, summaryRoster, srcStatCur, srcStatPrev);   // 📝 失误分析总结（自动生成）
+        html += buildErrCategoryModule(monthErrDim, dc, curWd);   // 🏷️ 失误详细分析（三来源 · N 条，2026-11-10 用户定：月视图同周版）
     } else {
         // 周版：排比卡右侧并排「📅 周度失误走势（最近4周档）」；下方接失误详细分析（类别汇总，点类别看明细弹窗）
         html += '<div class="m-flex2">' +
@@ -3789,12 +3827,20 @@ function genWeekReportText(weekData, prevWeekData) {
     return lines.join('\n');
 }
 
-// ===== 月报文本（2026-09-05 月度汇报风格，逐字保持原输出）=====
+// ===== 月报文本（2026-11-10 用户重定模板）=====
+// 1 复检总量（=判责量）：N，较上月上升/下降N台；
+// 2. 失误总量（初审+抽检+QA）：N，环比减少/增加N个；
+// 3. 初审准确率（=判责准确率，目标99.5%）：x.xx%，环比上升/下降y%；
+// 4. 抽检量：N  （各抽检人员：计数 全列）环比下降/上升N台；——续行 线上/实物（不带占比）
+// 5 有效抽检天数/人效：有效抽检N天，日均≈N台
+// 6. 抽检覆盖率环比（目标15%）：x.xx%，环比下降/上升y%；
+// 7. 抽检准确率环比（目标99%）：x.xx%，环比上升/下降y%。
+// 8 抽检失误环比：N，环比下降/上升N个
+// 比率类先按展示两位小数比较，显示一致 → 与上月持平（不出现「下降0.00%」）
 function genMonthReportText(weekData, prevWeekData) {
     var lines = [];
-    lines.push('核心指标（' + monthLabelOf(weekData.monday) + '）');
 
-    // 抽检人员计数（同周口径：线上+实物合并，括号内全列）
+    // 抽检人员计数：线上+实物按人员出现次数统计（括号内全列）
     var personSamplingCount = {};
     samplingData.online.concat(samplingData.physical).forEach(function(s) {
         if (!isInWeek(s.date, weekData.monday, weekData.sunday)) return;
@@ -3807,62 +3853,73 @@ function genMonthReportText(weekData, prevWeekData) {
         .sort(function(a, b) { return b.sampling - a.sampling; });
     var topStr = personList.length > 0 ? '  （' + personList.map(function(p) { return p.name + '：' + p.sampling; }).join('  ') + '）' : '';
 
-    var samplingDiff = '';
-    if (prevWeekData) {
-        var ds = weekData.totalSampling - prevWeekData.totalSampling;
-        if (ds > 0) samplingDiff = ' 较上月上升' + ds + '台';
-        else if (ds < 0) samplingDiff = ' 较上月下降' + (-ds) + '台';
-        else samplingDiff = ' 与上月持平';
+    // 百分比环比：先按两位小数取整再比较
+    function pctDiff(cur, prev) {
+        var curTxt = cur.toFixed(2), prevTxt = prev.toFixed(2);
+        if (curTxt === prevTxt) return '，与上月持平';
+        var d = Number(curTxt) - Number(prevTxt);
+        return d > 0 ? '，环比上升' + d.toFixed(2) + '%' : '，环比下降' + (-d).toFixed(2) + '%';
     }
-    lines.push('1、抽检量：' + weekData.totalSampling + topStr + samplingDiff);
-    lines.push('  线上：' + weekData.onlineCount + '  实物：' + weekData.physicalCount);
-    // 人效口径：月=抽检量/当月有效抽检天数（与KPI表一致）
+
+    // —— 1 复检总量（=判责量）——
+    var l1 = '1 复检总量：' + weekData.judgmentCount;
+    if (prevWeekData) {
+        var d1 = weekData.judgmentCount - prevWeekData.judgmentCount;
+        if (d1 > 0) l1 += '，较上月上升' + d1 + '台';
+        else if (d1 < 0) l1 += '，较上月下降' + (-d1) + '台';
+        else l1 += '，与上月持平';
+    }
+    lines.push(l1 + '；');
+
+    // —— 2. 失误总量（三来源合计）——
+    var curErr = (weekData.csErrors || 0) + (weekData.cjErrors || 0) + (weekData.qaErrors || 0);
+    var l2 = '2. 失误总量：' + curErr;
+    if (prevWeekData) {
+        var prevErr = (prevWeekData.csErrors || 0) + (prevWeekData.cjErrors || 0) + (prevWeekData.qaErrors || 0);
+        var d2 = curErr - prevErr;
+        if (d2 > 0) l2 += '，环比增加' + d2 + '个';
+        else if (d2 < 0) l2 += '，环比减少' + (-d2) + '个';
+        else l2 += '，与上月持平';
+    }
+    lines.push(l2 + '；');
+
+    // —— 3. 初审准确率（=判责准确率）——
+    lines.push('3. 初审准确率(99.5%)：' + weekData.panZeAccuracy.toFixed(2) + '%' +
+        (prevWeekData ? pctDiff(weekData.panZeAccuracy, prevWeekData.panZeAccuracy) : '') + '；');
+
+    // —— 4. 抽检量（人员括号 + 环比；续行线上/实物）——
+    var l4 = '4. 抽检量：' + weekData.totalSampling + topStr;
+    if (prevWeekData) {
+        var d4 = weekData.totalSampling - prevWeekData.totalSampling;
+        if (d4 > 0) l4 += '环比上升' + d4 + '台';
+        else if (d4 < 0) l4 += '环比下降' + (-d4) + '台';
+        else l4 += '环比持平';
+    }
+    lines.push(l4 + '；');
+    lines.push(' 线上：' + weekData.onlineCount + '  实物：' + weekData.physicalCount + '，');
+
+    // —— 5 有效抽检天数/人效（月=抽检量/当月有效抽检天数，与KPI表一致）——
     var actDays = Math.max(1, weekData.activeDays || 1);
-    lines.push('  日均人效：有效抽检' + weekData.activeDays + '天，日均≈' + Math.round(weekData.totalSampling / actDays) + '台');
+    lines.push('5 有效抽检天数/人效：有效抽检' + weekData.activeDays + '天，日均≈' + Math.round(weekData.totalSampling / actDays) + '台');
 
-    // 判责量
-    var jzDiff = '';
-    if (prevWeekData) {
-        var dj = weekData.judgmentCount - prevWeekData.judgmentCount;
-        if (dj > 0) jzDiff = '，较上月上升' + dj + '台';
-        else if (dj < 0) jzDiff = '，较上月下降' + (-dj) + '台';
-        else jzDiff = '，与上月持平';
-    }
-    lines.push('2、判责量：' + weekData.judgmentCount + jzDiff);
+    // —— 6. 抽检覆盖率（目标15%）——
+    lines.push('6. 抽检覆盖率环比(15%)：' + weekData.coverage.toFixed(2) + '%' +
+        (prevWeekData ? pctDiff(weekData.coverage, prevWeekData.coverage) : '') + '；');
 
-    // 抽检覆盖率
-    var covDiff = '';
-    if (prevWeekData) {
-        var dc = weekData.coverage - prevWeekData.coverage;
-        if (dc > 0) covDiff = '，较上月提升' + dc.toFixed(2) + '%';
-        else if (dc < 0) covDiff = '，较上月下降' + (-dc).toFixed(2) + '%';
-        else covDiff = '，与上月持平';
-    }
-    lines.push('3、抽检覆盖率：' + weekData.coverage.toFixed(2) + '%' + covDiff);
+    // —— 7. 抽检准确率（目标99%）——
+    lines.push('7. 抽检准确率环比(99%)：' + weekData.accuracy.toFixed(2) + '%' +
+        (prevWeekData ? pctDiff(weekData.accuracy, prevWeekData.accuracy) : '') + '。');
 
-    // 抽检准确率
-    var accDiff = '';
+    // —— 8 抽检失误 ——
+    var l8 = '8 抽检失误环比：' + weekData.cjErrors;
     if (prevWeekData) {
-        var da = weekData.accuracy - prevWeekData.accuracy;
-        if (da > 0) accDiff = '，较上月提升' + da.toFixed(2) + '%';
-        else if (da < 0) accDiff = '，较上月下降' + (-da).toFixed(2) + '%';
-        else accDiff = '，与上月持平';
+        var d8 = weekData.cjErrors - prevWeekData.cjErrors;
+        if (d8 > 0) l8 += '，环比上升' + d8 + '个';
+        else if (d8 < 0) l8 += '，环比下降' + (-d8) + '个';
+        else l8 += '，环比持平';
     }
-    lines.push('4、抽检准确率：' + weekData.accuracy.toFixed(2) + '%' + accDiff);
+    lines.push(l8);
 
-    // 趋势小结（月汇报风格：带两侧周期与抽检量）
-    var trendTxt = '数据不足';
-    if (prevWeekData) {
-        var dt = weekData.totalSampling - prevWeekData.totalSampling;
-        if (dt < 0) trendTxt = '呈下降趋势';
-        else if (dt > 0) trendTxt = '呈上升趋势';
-        else trendTxt = '整体平稳';
-    }
-    var prevLbl = getPeriodLabel(prevWeekData || weekData);
-    var curLbl = getPeriodLabel(weekData);
-    var base = (trendTxt === '数据不足') ? '数据不足'
-        : '较上月抽检量' + trendTxt + '（' + prevLbl + '：' + (prevWeekData ? prevWeekData.totalSampling : 0) + '台 → ' + curLbl + '：' + weekData.totalSampling + '台）';
-    lines.push('5、趋势小结：' + base);
     return lines.join('\n');
 }
 
